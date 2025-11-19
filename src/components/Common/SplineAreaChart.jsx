@@ -21,11 +21,11 @@ const data = [
   { name: "Jul", value: 75 },
 ];
 
-const SplineAreaChart = () => {
+const SplineAreaChart = ({title}) => {
   return (
     <Card sx={{ mb: 4, p: 2, flex: 1 }}>
       <Typography variant="h6" gutterBottom>
-        Chart
+      {title}
       </Typography>
       <ResponsiveContainer width="100%" height={300}>
         <AreaChart data={data}>

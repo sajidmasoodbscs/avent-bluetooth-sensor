@@ -32,8 +32,8 @@ export default function Sidebar({ drawerOpen, setDrawerOpen }) {
           transition: "width 0.3s",
           overflowX: "hidden",
           boxSizing: "border-box",
-          backgroundColor: "#ea8301",
-          color: "#fff",
+          backgroundColor: "#fff",
+          color: "#000",
         },
       }}
     >
@@ -53,25 +53,25 @@ export default function Sidebar({ drawerOpen, setDrawerOpen }) {
         <List>
           <ListItem button sx={{ cursor: "pointer" }}>
             <ListItemIcon>
-              <DashboardIcon sx={{ color: "#fff" }} />
+              <DashboardIcon sx={{ color: "#000" }} />
             </ListItemIcon>
             <ListItemText primary="Dashboard" />
           </ListItem>
           <ListItem button sx={{ cursor: "pointer" }}>
             <ListItemIcon>
-              <SearchIcon sx={{ color: "#fff" }} />
+              <SearchIcon sx={{ color: "#000" }} />
             </ListItemIcon>
             <ListItemText primary="Explore" />
           </ListItem>
           <ListItem button sx={{ cursor: "pointer" }}>
             <ListItemIcon>
-              <CalendarTodayIcon sx={{ color: "#fff" }} />
+              <CalendarTodayIcon sx={{ color: "#000" }} />
             </ListItemIcon>
             <ListItemText primary="Schedule" />
           </ListItem>
           <ListItem button sx={{ cursor: "pointer" }}>
             <ListItemIcon>
-              <SettingsIcon sx={{ color: "#fff" }} />
+              <SettingsIcon sx={{ color: "#000" }} />
             </ListItemIcon>
             <ListItemText primary="Setting" />
           </ListItem>
@@ -80,7 +80,7 @@ export default function Sidebar({ drawerOpen, setDrawerOpen }) {
         <List>
           <ListItem button sx={{ cursor: "pointer" }} onClick={() => setDrawerOpen(false)}>
             <ListItemIcon>
-              <CloseIcon sx={{ color: "#fff" }} />
+              <CloseIcon sx={{ color: "#000" }} />
             </ListItemIcon>
             <ListItemText primary="Close Drawer" />
           </ListItem>
