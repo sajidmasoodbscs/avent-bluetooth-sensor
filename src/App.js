@@ -1,17 +1,13 @@
 import "./App.css";
-import { CacheProvider } from "@emotion/react";
-import createCache from "@emotion/cache";
-import { ThemeProvider, createTheme } from "@mui/material/styles";
+import { ThemeProvider } from "@mui/material/styles";
 import CssBaseline from "@mui/material/CssBaseline";
 import { Routes, Route, Navigate } from "react-router-dom";
 import routes from "./routes";
 import theme from "./theme";
 
 // ✅ Create a cache (no RTL)
-const cache = createCache({ key: "mui" });
 
 // ✅ Create default theme
-const defaultTheme = createTheme();
 
 function App() {
   const getRoutes = (allRoutes) =>

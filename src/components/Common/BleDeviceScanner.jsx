@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Box, Grid, Paper, Typography, Button } from "@mui/material";
+import { Box, Typography, Button } from "@mui/material";
 
 const BleDeviceScanner = ({ onSensorData }) => {
   // const [sensorData, setSensorData] = useState({});

@@ -1,19 +1,11 @@
 import React, { useState } from "react";
-import { Box, Grid, Paper, Typography, Container } from "@mui/material";
+import { Box, Grid, Paper, Typography } from "@mui/material";
 import SensorDetailsModal from "../Modal/SensorDetailsModal";
-import ArrowUpwardIcon from "@mui/icons-material/ArrowUpward";
-import ArrowDownwardIcon from "@mui/icons-material/ArrowDownward";
 
-const data = {
-  reading1: 65,
-  reading2: 72,
-  levelChange: 7, // positive = increase, negative = decrease
-};
 
 export default function BreathMoistureLevel({temperature,humidity,irTemperature,accel,gyro,pressure}) {
   const [modalOpen, setModalOpen] = useState(false);
   const [modalConfig, setModalConfig] = useState({ companyName: 'Nordic Sensor', sensorName: '', sensorKey: 'all', extraValues: null });
-  const isIncrease = data.levelChange >= 0;
 
   const openModal = (config) => {
     setModalConfig({ companyName: 'Test Assembly Sensor', ...config });
