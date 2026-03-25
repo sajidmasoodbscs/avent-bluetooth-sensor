@@ -15,7 +15,9 @@ const ConnectModal = ({ onSensorData }) => {
   const SERVICE_UUID = '12345678-1234-1234-1234-123456789abc';
   const TX_CHARACTERISTIC_UUID = '12345678-1234-1234-1234-123456789abd';
   const RX_CHARACTERISTIC_UUID = '12345678-1234-1234-1234-123456789abe';
-
+  if (server) {
+        console.log(server);
+  }
   useEffect(() => {
     const isConnectedBefore = localStorage.getItem('bleConnected') === 'true';
     setReconnect(isConnectedBefore);
@@ -58,9 +60,7 @@ const ConnectModal = ({ onSensorData }) => {
       ble.setConnection({ server, service, tx: txCharacteristic, rx: rxCharacteristic });
 
       const cmd = new TextEncoder().encode('GET:ALL');
-      if (server) {
-        console.log(server);
-      }
+      
       let consecutiveErrors = 0;
       const pollData = async () => {
         if (!server.connected) return;
