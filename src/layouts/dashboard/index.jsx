@@ -4,7 +4,6 @@ import MenuAppBar from "../../components/HeaderBar";
 import Sidebar from "../../components/Sidebar";
 import HomePage from "../../components/HomePage";
 
-const SIDEBAR_WIDTH = 240;
 
 const DashboardLayout = ({ children }) => {
   const [drawerOpen, setDrawerOpen] = useState(false);

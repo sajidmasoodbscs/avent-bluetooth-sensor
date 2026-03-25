@@ -58,7 +58,9 @@ const ConnectModal = ({ onSensorData }) => {
       ble.setConnection({ server, service, tx: txCharacteristic, rx: rxCharacteristic });
 
       const cmd = new TextEncoder().encode('GET:ALL');
-
+      if (server) {
+        console.log(server);
+      }
       let consecutiveErrors = 0;
       const pollData = async () => {
         if (!server.connected) return;
