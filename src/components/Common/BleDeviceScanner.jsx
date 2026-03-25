@@ -23,7 +23,8 @@ const BleDeviceScanner = ({ onSensorData }) => {
       });
 
 
-      console.log("device",device)
+      
+      console.log("device test",device)
       const server = await device.gatt.connect();
       const service = await server.getPrimaryService(SERVICE_UUID);
       console.log("service",service)
