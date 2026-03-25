@@ -1,129 +1,169 @@
 import React, { useState } from "react";
-import { Box, Grid, Paper, Typography } from "@mui/material";
+import { Box, Grid, Paper, Typography, IconButton } from "@mui/material";
+import ThermostatIcon from '@mui/icons-material/Thermostat';
+import OpacityIcon from '@mui/icons-material/Opacity';
+import DeviceThermostatIcon from '@mui/icons-material/DeviceThermostat';
+import SpeedIcon from '@mui/icons-material/Speed';
+import RotateRightIcon from '@mui/icons-material/RotateRight';
+import CompressIcon from '@mui/icons-material/Compress';
+import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 import SensorDetailsModal from "../Modal/SensorDetailsModal";
+import { useNavigate } from "react-router-dom";
 
+const SensorCard = ({ title, value, unit, icon: Icon, iconBg: iconBg, onClick }) => (
+  <Paper
+    elevation={0}
+    sx={{
+      p: 2,
+      backgroundColor: "#fff",
+      color: "#000",
+      borderRadius: "16px",
+      height: "100%",
+      width: "100%",
+      border: "1px solid #f0f0f0",
+      transition: "all 0.3s ease",
+      cursor: "pointer",
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "space-between",
+      gap: 2,
+      "&:hover": {
+        boxShadow: "0 10px 20px rgba(0,0,0,0.05)",
+        transform: "translateY(-4px)",
+        borderColor: "#53ba64",
+      },
+    }}
+    onClick={onClick}
+  >
+    {/* Left: Icon Box */}
+    <Box 
+      sx={{ 
+        backgroundColor: iconBg || "rgba(83, 186, 100, 0.1)", 
+        p: 1.5, 
+        borderRadius: "12px",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        minWidth: "56px",
+        height: "56px"
+      }}
+    >
+      <Icon sx={{ color: iconBg ? "rgba(0,0,0,0.5)" : "#53ba64", fontSize: 28 }} />
+    </Box>
+    
+    {/* Middle: Value & Label Stack */}
+    <Box sx={{ flexGrow: 1, display: "flex", flexDirection: "column" }}>
+      <Box sx={{ display: "flex", alignItems: "baseline", gap: 0.5 }}>
+        <Typography variant="h5" sx={{ fontWeight: "bold" }}>
+          {value}
+        </Typography>
+        <Typography variant="caption" sx={{ color: "#888", fontWeight: "bold" }}>
+          {unit}
+        </Typography>
+      </Box>
+      <Typography variant="body2" sx={{ color: "#999", fontWeight: 500 }}>
+        {title}
+      </Typography>
+    </Box>
 
-export default function BreathMoistureLevel({temperature,humidity,irTemperature,accel,gyro,pressure}) {
+    {/* Right: Chevron Box */}
+    <Box 
+      sx={{ 
+        backgroundColor: "#f5f5f5", 
+        p: 0.5, 
+        borderRadius: "8px", 
+        display: "flex", 
+        alignItems: "center", 
+        justifyContent: "center" 
+      }}
+    >
+      <ChevronRightIcon sx={{ color: "#ccc", fontSize: 20 }} />
+    </Box>
+  </Paper>
+);
+
+export default function BreathMoistureLevel({ temperature, humidity, irTemperature, accel, gyro, pressure, isUseCaseView }) {
   const [modalOpen, setModalOpen] = useState(false);
   const [modalConfig, setModalConfig] = useState({ companyName: 'Nordic Sensor', sensorName: '', sensorKey: 'all', extraValues: null });
+  const navigate = useNavigate();
 
-  const openModal = (config) => {
-    setModalConfig({ companyName: 'Test Assembly Sensor', ...config });
-    setModalOpen(true);
+  const handleCardClick = (config) => {
+    if (isUseCaseView) {
+      navigate(`/use-cases/${config.sensorKey}`);
+    } else {
+      setModalConfig({ companyName: 'Test Assembly Sensor', ...config });
+      setModalOpen(true);
+    }
   };
 
   return (
-    <Box sx={{ p: { xs: 2, md: 4 }, width: "100%" }}>
-      <Typography variant="h6" gutterBottom>
-        Today Breath Moisture Level
-      </Typography>
-
-      <Grid container spacing={2}>
-        <Grid item size={{ xs: 12, md: 4 }}>
-          <Paper
-            elevation={3}
-            sx={{
-              p: 3,
-              backgroundColor: "#53ba64",
-              color: "#fff",
-              textAlign: "center",
-              borderRadius: 2,
-              height: "100%",
-              width:"100%"
-            }}
-          onClick={() => openModal({ sensorName: 'Temperature', sensorKey: 'temperature' })}
-          >
-            <Typography variant="h5">Temprature</Typography>
-            <Typography variant="h4">{temperature?temperature:0}°C</Typography>
-          </Paper>
+    <Box sx={{ width: "100%" }}>
+      <Grid container spacing={2} columns={12}>
+        <Grid item size={{ xs: 12, sm: 6, md: 4, lg: 4 }}>
+          <SensorCard 
+            title="Temperature" 
+            value={temperature ? temperature.toFixed(1) : 0} 
+            unit="°C" 
+            icon={ThermostatIcon}
+            iconBg="rgba(156, 39, 176, 0.1)"
+            onClick={() => handleCardClick({ sensorName: 'Temperature', sensorKey: 'temperature' })}
+          />
         </Grid>
-        <Grid item size={{ xs: 12, md: 4 }}>
-          <Paper
-            elevation={3}
-            sx={{
-              p: 3,
-              backgroundColor: "#53ba64",
-              color: "#fff",
-              textAlign: "center",
-              borderRadius: 2,
-              height: "100%",
-              width:"100%"
-            }}
-            onClick={() => openModal({ sensorName: 'Humidity', sensorKey: 'humidity' })}
-          >
-            <Typography variant="h5">Humidity</Typography>
-            <Typography variant="h4">{humidity?humidity:0}% RH</Typography>
-          </Paper>
+        <Grid item size={{ xs: 12, sm: 6, md: 4, lg: 4 }}>
+          <SensorCard 
+            title="Humidity" 
+            value={humidity ? humidity.toFixed(1) : 0} 
+            unit="% RH" 
+            icon={OpacityIcon}
+            iconBg="rgba(33, 150, 243, 0.1)"
+            onClick={() => handleCardClick({ sensorName: 'Humidity', sensorKey: 'humidity' })}
+          />
         </Grid>
-        <Grid item size={{ xs: 12, md: 4 }}>
-          <Paper
-            elevation={3}
-            sx={{
-              p: 3,
-              backgroundColor: "#53ba64",
-              color: "#fff",
-              textAlign: "center",
-              borderRadius: 2,
-              height: "100%",
-            }}
-            onClick={() => openModal({ sensorName: 'IR Evaluation', sensorKey: 'irTemperature' })}
-          >
-            <Typography variant="h5">IR Temperature</Typography>
-            <Typography variant="h4">{irTemperature?irTemperature:0}°C</Typography>
-          </Paper>
+        <Grid item size={{ xs: 12, sm: 6, md: 4, lg: 4 }}>
+          <SensorCard 
+            title="IR Temperature" 
+            value={irTemperature ? irTemperature.toFixed(1) : 0} 
+            unit="°C" 
+            icon={DeviceThermostatIcon}
+            iconBg="rgba(255, 152, 0, 0.1)"
+            onClick={() => handleCardClick({ sensorName: 'IR Evaluation', sensorKey: 'irTemperature' })}
+          />
         </Grid>
-        <Grid item size={{ xs: 12, md: 4 }}>
-          <Paper
-            elevation={3}
-            sx={{
-              p: 3,
-              backgroundColor: "#53ba64",
-              color: "#fff",
-              textAlign: "center",
-              borderRadius: 2,
-              height: "100%",
-            }}
-            onClick={() => openModal({ sensorName: 'IMU Accelerometer', sensorKey: 'imuAccel' })}
-          >
-            <Typography variant="h5">IMU Accelerometer </Typography>
-            <Typography variant="h4">{accel?accel.join(', '):0} m/s²</Typography>
-          </Paper>
-        </Grid>
-        <Grid item size={{ xs: 12, md: 4 }}>
-          <Paper
-            elevation={3}
-            sx={{
-              p: 3,
-              backgroundColor: "#53ba64",
-              color: "#fff",
-              textAlign: "center",
-              borderRadius: 2,
-              height: "100%",
-            }}
-            onClick={() => openModal({ sensorName: 'IMU Gyroscope', sensorKey: 'imuGyro' })}
-          >
-            <Typography variant="h5">Gyroscope </Typography>
-            <Typography variant="h4">{gyro?gyro.join(', '):0} °/s</Typography>
-          </Paper>
-        </Grid>
-        <Grid item size={{ xs: 12, md: 4 }}>
-          <Paper
-            elevation={3}
-            sx={{
-              p: 3,
-              backgroundColor: "#53ba64",
-              color: "#fff",
-              textAlign: "center",
-              borderRadius: 2,
-              height: "100%",
-              width:"100%"
-            }}
-            onClick={() => openModal({ sensorName: 'Pressure Sensor', sensorKey: 'pressure' })}
-          >
-            <Typography variant="h5">Pressure</Typography>
-            <Typography variant="h4">{pressure?pressure:0}hPa</Typography>
-          </Paper>
-        </Grid>
+        
+        {!isUseCaseView && (
+          <>
+            <Grid item size={{ xs: 12, sm: 6, md: 4, lg: 4 }}>
+              <SensorCard 
+                title="IMU Accelerometer" 
+                value={accel ? accel[0].toFixed(2) : 0} 
+                unit="m/s²" 
+                icon={SpeedIcon}
+                iconBg="rgba(76, 175, 80, 0.1)"
+                onClick={() => handleCardClick({ sensorName: 'IMU Accelerometer', sensorKey: 'imuAccel' })}
+              />
+            </Grid>
+            <Grid item size={{ xs: 12, sm: 6, md: 4, lg: 4 }}>
+              <SensorCard 
+                title="Gyroscope" 
+                value={gyro ? gyro[0].toFixed(2) : 0} 
+                unit="°/s" 
+                icon={RotateRightIcon}
+                iconBg="rgba(244, 67, 54, 0.1)"
+                onClick={() => handleCardClick({ sensorName: 'IMU Gyroscope', sensorKey: 'imuGyro' })}
+              />
+            </Grid>
+            <Grid item size={{ xs: 12, sm: 6, md: 4, lg: 4 }}>
+              <SensorCard 
+                title="Pressure" 
+                value={pressure ? pressure.toFixed(1) : 0} 
+                unit="hPa" 
+                icon={CompressIcon}
+                iconBg="rgba(0, 188, 212, 0.1)"
+                onClick={() => handleCardClick({ sensorName: 'Pressure Sensor', sensorKey: 'pressure' })}
+              />
+            </Grid>
+          </>
+        )}
       </Grid>
 
       <SensorDetailsModal

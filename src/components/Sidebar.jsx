@@ -15,9 +15,14 @@ import CloseIcon from "@mui/icons-material/Close";
 import SettingsIcon from '@mui/icons-material/Settings';
 import logo from "../assets/images/avnet_abacus.svg";
 
+import { useNavigate } from "react-router-dom";
+import CasesIcon from '@mui/icons-material/Assignment';
+
 const drawerWidth = 240;
 
 export default function Sidebar({ drawerOpen, setDrawerOpen }) {
+  const navigate = useNavigate();
+
   return (
     <Drawer
       variant="persistent"
@@ -51,34 +56,50 @@ export default function Sidebar({ drawerOpen, setDrawerOpen }) {
 
       <Box sx={{ overflow: "auto" }}>
         <List>
-          <ListItem button sx={{ cursor: "pointer" }}>
+          <ListItem 
+            component="div" 
+            onClick={() => navigate("/dashboard")} 
+            sx={{ cursor: "pointer", "&:hover": { backgroundColor: "rgba(0,0,0,0.04)" } }}
+          >
             <ListItemIcon>
               <DashboardIcon sx={{ color: "#000" }} />
             </ListItemIcon>
             <ListItemText primary="Dashboard" />
           </ListItem>
-          <ListItem button sx={{ cursor: "pointer" }}>
+          
+          <ListItem 
+            component="div" 
+            onClick={() => navigate("/use-cases")} 
+            sx={{ cursor: "pointer", "&:hover": { backgroundColor: "rgba(0,0,0,0.04)" } }}
+          >
+            <ListItemIcon>
+              <CasesIcon sx={{ color: "#000" }} />
+            </ListItemIcon>
+            <ListItemText primary="Use Cases" />
+          </ListItem>
+
+          <ListItem component="div" sx={{ cursor: "pointer", "&:hover": { backgroundColor: "rgba(0,0,0,0.04)" } }}>
             <ListItemIcon>
               <SearchIcon sx={{ color: "#000" }} />
             </ListItemIcon>
             <ListItemText primary="Explore" />
           </ListItem>
-          <ListItem button sx={{ cursor: "pointer" }}>
+          <ListItem component="div" sx={{ cursor: "pointer", "&:hover": { backgroundColor: "rgba(0,0,0,0.04)" } }}>
             <ListItemIcon>
               <CalendarTodayIcon sx={{ color: "#000" }} />
             </ListItemIcon>
             <ListItemText primary="Schedule" />
           </ListItem>
-          <ListItem button sx={{ cursor: "pointer" }}>
+          <ListItem component="div" sx={{ cursor: "pointer", "&:hover": { backgroundColor: "rgba(0,0,0,0.04)" } }}>
             <ListItemIcon>
               <SettingsIcon sx={{ color: "#000" }} />
             </ListItemIcon>
             <ListItemText primary="Setting" />
           </ListItem>
         </List>
-        <Divider sx={{ borderColor: "rgba(255,255,255,0.3)" }} />
+        <Divider sx={{ borderColor: "rgba(0,0,0,0.1)" }} />
         <List>
-          <ListItem button sx={{ cursor: "pointer" }} onClick={() => setDrawerOpen(false)}>
+          <ListItem component="div" sx={{ cursor: "pointer", "&:hover": { backgroundColor: "rgba(0,0,0,0.04)" } }} onClick={() => setDrawerOpen(false)}>
             <ListItemIcon>
               <CloseIcon sx={{ color: "#000" }} />
             </ListItemIcon>

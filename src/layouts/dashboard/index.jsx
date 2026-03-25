@@ -2,11 +2,13 @@ import React, { useState } from "react";
 import Box from "@mui/material/Box";
 import MenuAppBar from "../../components/HeaderBar";
 import Sidebar from "../../components/Sidebar";
-import HomePage from "../../components/HomePage";
+import { Outlet } from "react-router-dom";
+import ConnectModal from "../../components/Modal/ConnectModal";
+import { useBle } from "../../ble/BleContext";
 
-
-const DashboardLayout = ({ children }) => {
+const DashboardLayout = () => {
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const { setLatestData } = useBle();
 
   return (
     <Box sx={{ display: "flex" }}>
@@ -21,16 +23,16 @@ const DashboardLayout = ({ children }) => {
         component="main"
         sx={{
           flexGrow: 1,
-          p: 3,
-        //   transition: "margin 0.3s",
-        //   ml: drawerOpen ? `${SIDEBAR_WIDTH}px` : 0,
-        //   width: drawerOpen ? `calc(100% - ${SIDEBAR_WIDTH}px)` : "100%",
+          p: 1,
         }}
       >
         {/* Spacer for AppBar */}
         <Box sx={{ height: "64px" }} />
-        <HomePage />
+        <Outlet />
       </Box>
+
+      {/* Global Connection Modal */}
+      <ConnectModal onSensorData={setLatestData} />
     </Box>
   );
 };

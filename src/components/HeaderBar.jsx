@@ -25,16 +25,16 @@ export default function MenuAppBar({ drawerOpen, setDrawerOpen }) {
 
   return (
     <AppBar
-    position="fixed"
-    sx={{
+      position="fixed"
+      sx={{
         backgroundColor:"#53ba64",
-      zIndex: (theme) => theme.zIndex.drawer + 1,
-      transition: "width 0.3s, margin 0.3s",
-      width: drawerOpen ? `calc(100% - ${drawerWidth}px)` : "100%",
-      ml: drawerOpen ? `${drawerWidth}px` : 0,
-    }}
+        zIndex: (theme) => theme.zIndex.drawer + 1,
+        transition: "width 0.3s, margin 0.3s",
+        width: drawerOpen ? `calc(100% - ${drawerWidth}px)` : "100%",
+        ml: drawerOpen ? `${drawerWidth}px` : 0,
+      }}
     >
-      <Toolbar>
+      <Toolbar disableGutters sx={{ px: 2 }}>
         <IconButton
           color="inherit"
           edge="start"

@@ -9,29 +9,25 @@ import theme from "./theme";
 
 // ✅ Create default theme
 
+import HomePage from "./components/HomePage";
+import UseCasesPage from "./components/UseCasesPage";
+import GraphPage from "./components/GraphPage";
+import DashboardLayout from "./layouts/dashboard";
+
 function App() {
-  const getRoutes = (allRoutes) =>
-    allRoutes.flatMap((route) => {
-      if (route.collapse) return getRoutes(route.collapse);
-      return route.route ? (
-        <Route
-          exact
-          path={route.route}
-          element={route.component}
-          key={route.key}
-        />
-      ) : [];
-    });
-
   return (
-
-      <ThemeProvider theme={theme}>
-        <CssBaseline />
-        <Routes>
-          {getRoutes(routes)}
-          <Route path="*" element={<Navigate to="/dashboard" />} />
-        </Routes>
-      </ThemeProvider>
+    <ThemeProvider theme={theme}>
+      <CssBaseline />
+      <Routes>
+        <Route element={<DashboardLayout />}>
+          <Route path="/dashboard" element={<HomePage />} />
+          <Route path="/use-cases" element={<UseCasesPage />} />
+          <Route path="/use-cases/:sensorId" element={<GraphPage />} />
+          <Route path="/" element={<Navigate to="/dashboard" />} />
+        </Route>
+        <Route path="*" element={<Navigate to="/dashboard" />} />
+      </Routes>
+    </ThemeProvider>
   );
 }
 
