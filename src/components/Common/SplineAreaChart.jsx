@@ -1,52 +1,28 @@
-import { Box, Card, CardContent, Typography } from "@mui/material";
-import {
-  LineChart,
-  Line,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-  Area,
-  AreaChart,
-} from "recharts";
+import { Card, Typography } from "@mui/material";
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 
-const data = [
-  { name: "Jan", value: 30 },
-  { name: "Feb", value: 40 },
-  { name: "Mar", value: 30 },
-  { name: "Apr", value: 50 },
-  { name: "May", value: 45 },
-  { name: "Jun", value: 85 },
-  { name: "Jul", value: 75 },
-];
-
-const SplineAreaChart = ({title}) => {
+// Reusable real-time line chart ("waveform" style)
+// Props:
+// - title: string
+// - data: array of { time: string, value: number }
+// - height: number (optional)
+// - hideXAxis: boolean (optional)
+const SplineAreaChart = ({ title, data = [], height = 300, hideXAxis = true }) => {
   return (
-    <Card sx={{ mb: 4, p: 2, flex: 1 }}>
-      <Typography variant="h6" gutterBottom>
-      {title}
-      </Typography>
-      <ResponsiveContainer width="100%" height={300}>
-        <AreaChart data={data}>
-          <defs>
-            <linearGradient id="colorValue" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="5%" stopColor="#53ba64" stopOpacity={0.8} />
-              <stop offset="95%" stopColor="#53ba64" stopOpacity={0} />
-            </linearGradient>
-          </defs>
-          <XAxis dataKey="name" />
-          <YAxis domain={[20, 90]} />
-          <CartesianGrid strokeDasharray="3 3" />
+    <Card sx={{ mb: 2, p: 2, flex: 1 }}>
+      {title && (
+        <Typography variant="subtitle1" gutterBottom>
+          {title}
+        </Typography>
+      )}
+      <ResponsiveContainer width="100%" height={height}>
+        <LineChart data={data} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+          <XAxis dataKey="time" hide={hideXAxis} tick={{ fontSize: 12 }} />
+          <YAxis width={40} tick={{ fontSize: 12 }} stroke="#9e9e9e" />
+          <CartesianGrid strokeDasharray="2 4" stroke="#e0e0e0" />
           <Tooltip />
-          <Area
-            type="monotone"
-            dataKey="value"
-            stroke="#53ba64"
-            fillOpacity={1}
-            fill="url(#colorValue)"
-          />
-        </AreaChart>
+          <Line type="monotone" dataKey="value" stroke="#2e7d32" strokeWidth={3} dot={false} isAnimationActive />
+        </LineChart>
       </ResponsiveContainer>
     </Card>
   );

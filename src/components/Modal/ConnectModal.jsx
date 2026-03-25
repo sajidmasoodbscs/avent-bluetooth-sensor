@@ -1,5 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Box, Modal, Typography, Button } from "@mui/material";
+import { useBle } from '../../ble/BleContext';
+import { appendSensorPoint } from '../../utils/storage';
 
 const ConnectModal = ({ onSensorData }) => {
   const [open, setOpen] = useState(false);
@@ -8,6 +10,7 @@ const ConnectModal = ({ onSensorData }) => {
   const [reconnect, setReconnect] = useState(false);
   const [server, setServer] = useState(null);
   const pollingTimeoutRef = useRef(null);
+  const ble = useBle();
 
   const SERVICE_UUID = '12345678-1234-1234-1234-123456789abc';
   const TX_CHARACTERISTIC_UUID = '12345678-1234-1234-1234-123456789abd';
@@ -51,22 +54,62 @@ const ConnectModal = ({ onSensorData }) => {
       const txCharacteristic = await service.getCharacteristic(TX_CHARACTERISTIC_UUID);
       const rxCharacteristic = await service.getCharacteristic(RX_CHARACTERISTIC_UUID);
 
+      // expose into BLE context
+      ble.setConnection({ server, service, tx: txCharacteristic, rx: rxCharacteristic });
+
       const cmd = new TextEncoder().encode('GET:ALL');
 
+      let consecutiveErrors = 0;
       const pollData = async () => {
         if (!server.connected) return;
 
         try {
-          await txCharacteristic.writeValue(cmd);
-          await new Promise(resolve => setTimeout(resolve, 300));
-          const value = await rxCharacteristic.readValue();
-          handleNotification({ target: value });
+          // Skip global polling if a sensor modal is actively polling specific GET commands
+          if (ble.activeSensorKey) {
+            pollingTimeoutRef.current = setTimeout(pollData, 500);
+            return;
+          }
+          await ble.withGattLock(async () => {
+            await txCharacteristic.writeValue(cmd);
+            await new Promise(resolve => setTimeout(resolve, 300));
+            const value = await rxCharacteristic.readValue();
+            handleNotification({ target: value });
+          });
+          consecutiveErrors = 0; // Reset error count on success
           pollingTimeoutRef.current = setTimeout(pollData, 500); // Keep polling
         } catch (error) {
           console.error('Polling error:', error);
-          setErrorMessage('Device disconnected or powered off. Please reconnect your sensor.');
-          localStorage.removeItem('bleConnected');
-          setOpen(true);
+          consecutiveErrors++;
+          
+          // Check if it's a Linux/Ubuntu specific error
+          const isLinuxError = error.name === 'NotSupportedError' || 
+                              error.message?.includes('GATT operation failed') ||
+                              error.message?.includes('unknown reason');
+          
+          if (isLinuxError && consecutiveErrors < 3) {
+            // For Linux, try with longer delays and different approach
+            console.log(`[Linux] Retrying after error (attempt ${consecutiveErrors}/3)...`);
+            pollingTimeoutRef.current = setTimeout(pollData, 1000 + (consecutiveErrors * 500));
+            return;
+          }
+          
+          // Only prompt reconnect if actually disconnected or too many errors
+          try {
+            if (!server.connected || consecutiveErrors >= 5) {
+              if (isLinuxError) {
+                setErrorMessage('Bluetooth error on Linux. Try: 1) Chrome flags: chrome://flags/#enable-experimental-web-platform-features 2) Run Chrome with: --enable-features=WebBluetooth');
+              } else {
+                setErrorMessage('Device disconnected or powered off. Please reconnect your sensor.');
+              }
+              localStorage.removeItem('bleConnected');
+              setOpen(true);
+              return;
+            }
+          } catch (_) {
+            // fallthrough
+          }
+          // Otherwise, retry after a short delay without showing modal
+          pollingTimeoutRef.current = setTimeout(pollData, 800);
         }
       };
 
@@ -92,27 +135,36 @@ const ConnectModal = ({ onSensorData }) => {
       switch (type) {
         case 0x01:
           parsedData.temperature = floatValue;
+          appendSensorPoint('temperature', floatValue);
           break;
         case 0x02:
           parsedData.humidity = floatValue;
+          appendSensorPoint('humidity', floatValue);
           break;
         case 0x03:
           parsedData.irTemperature = floatValue;
+          appendSensorPoint('irTemperature', floatValue);
           break;
         case 0x04:
           parsedData.accel = [...(parsedData.accel || []), floatValue];
+          appendSensorPoint('imuAccel', floatValue);
           break;
         case 0x05:
           parsedData.pressure = floatValue;
+          appendSensorPoint('pressure', floatValue);
           break;
         case 0x06:
           parsedData.gyro = [...(parsedData.gyro || []), floatValue];
+          appendSensorPoint('imuGyro', floatValue);
           break;
         default:
           break;
       }
     }
 
+    if (Object.keys(parsedData).length > 0) {
+      ble.setLatestData(parsedData);
+    }
     if (onSensorData) onSensorData(parsedData);
     setOpen(false); // Close modal once connected and receiving data
   };

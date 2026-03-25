@@ -17,8 +17,6 @@ export default function MenuAppBar({ drawerOpen, setDrawerOpen }) {
   const [anchorEl, setAnchorEl] = React.useState(null);
   const auth = true; // Or manage via props/context
 
-
-  
   const handleMenu = (event) => {
     setAnchorEl(event.currentTarget);
   };
