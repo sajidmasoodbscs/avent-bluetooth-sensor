@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Box, Grid, Paper, Typography, IconButton } from "@mui/material";
+import { Box, Grid, Paper, Typography } from "@mui/material";
 import ThermostatIcon from '@mui/icons-material/Thermostat';
 import OpacityIcon from '@mui/icons-material/Opacity';
 import DeviceThermostatIcon from '@mui/icons-material/DeviceThermostat';
@@ -10,7 +10,7 @@ import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 import SensorDetailsModal from "../Modal/SensorDetailsModal";
 import { useNavigate } from "react-router-dom";
 
-const SensorCard = ({ title, value, unit, icon: Icon, iconBg: iconBg, onClick }) => (
+const SensorCard = ({ title, value, unit, icon: Icon, iconBg, onClick }) => (
   <Paper
     elevation={0}
     sx={{
@@ -36,10 +36,10 @@ const SensorCard = ({ title, value, unit, icon: Icon, iconBg: iconBg, onClick })
     onClick={onClick}
   >
     {/* Left: Icon Box */}
-    <Box 
-      sx={{ 
-        backgroundColor: iconBg || "rgba(83, 186, 100, 0.1)", 
-        p: 1.5, 
+    <Box
+      sx={{
+        backgroundColor: iconBg || "rgba(83, 186, 100, 0.1)",
+        p: 1.5,
         borderRadius: "12px",
         display: "flex",
         alignItems: "center",
@@ -50,7 +50,7 @@ const SensorCard = ({ title, value, unit, icon: Icon, iconBg: iconBg, onClick })
     >
       <Icon sx={{ color: iconBg ? "rgba(0,0,0,0.5)" : "#53ba64", fontSize: 28 }} />
     </Box>
-    
+
     {/* Middle: Value & Label Stack */}
     <Box sx={{ flexGrow: 1, display: "flex", flexDirection: "column" }}>
       <Box sx={{ display: "flex", alignItems: "baseline", gap: 0.5 }}>
@@ -67,14 +67,14 @@ const SensorCard = ({ title, value, unit, icon: Icon, iconBg: iconBg, onClick })
     </Box>
 
     {/* Right: Chevron Box */}
-    <Box 
-      sx={{ 
-        backgroundColor: "#f5f5f5", 
-        p: 0.5, 
-        borderRadius: "8px", 
-        display: "flex", 
-        alignItems: "center", 
-        justifyContent: "center" 
+    <Box
+      sx={{
+        backgroundColor: "#f5f5f5",
+        p: 0.5,
+        borderRadius: "8px",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center"
       }}
     >
       <ChevronRightIcon sx={{ color: "#ccc", fontSize: 20 }} />
@@ -100,63 +100,63 @@ export default function BreathMoistureLevel({ temperature, humidity, irTemperatu
     <Box sx={{ width: "100%" }}>
       <Grid container spacing={2} columns={12}>
         <Grid item size={{ xs: 12, sm: 6, md: 4, lg: 4 }}>
-          <SensorCard 
-            title="Temperature" 
-            value={temperature ? temperature.toFixed(1) : 0} 
-            unit="°C" 
+          <SensorCard
+            title="Temperature"
+            value={temperature ? temperature.toFixed(1) : 0}
+            unit="°C"
             icon={ThermostatIcon}
             iconBg="rgba(156, 39, 176, 0.1)"
             onClick={() => handleCardClick({ sensorName: 'Temperature', sensorKey: 'temperature' })}
           />
         </Grid>
         <Grid item size={{ xs: 12, sm: 6, md: 4, lg: 4 }}>
-          <SensorCard 
-            title="Humidity" 
-            value={humidity ? humidity.toFixed(1) : 0} 
-            unit="% RH" 
+          <SensorCard
+            title="Humidity"
+            value={humidity ? humidity.toFixed(1) : 0}
+            unit="% RH"
             icon={OpacityIcon}
             iconBg="rgba(33, 150, 243, 0.1)"
             onClick={() => handleCardClick({ sensorName: 'Humidity', sensorKey: 'humidity' })}
           />
         </Grid>
         <Grid item size={{ xs: 12, sm: 6, md: 4, lg: 4 }}>
-          <SensorCard 
-            title="IR Temperature" 
-            value={irTemperature ? irTemperature.toFixed(1) : 0} 
-            unit="°C" 
+          <SensorCard
+            title="IR Temperature"
+            value={irTemperature ? irTemperature.toFixed(1) : 0}
+            unit="°C"
             icon={DeviceThermostatIcon}
             iconBg="rgba(255, 152, 0, 0.1)"
             onClick={() => handleCardClick({ sensorName: 'IR Evaluation', sensorKey: 'irTemperature' })}
           />
         </Grid>
-        
+
         {!isUseCaseView && (
           <>
             <Grid item size={{ xs: 12, sm: 6, md: 4, lg: 4 }}>
-              <SensorCard 
-                title="IMU Accelerometer" 
-                value={accel ? accel[0].toFixed(2) : 0} 
-                unit="m/s²" 
+              <SensorCard
+                title="IMU Accelerometer"
+                value={accel ? accel[0].toFixed(2) : 0}
+                unit="m/s²"
                 icon={SpeedIcon}
                 iconBg="rgba(76, 175, 80, 0.1)"
                 onClick={() => handleCardClick({ sensorName: 'IMU Accelerometer', sensorKey: 'imuAccel' })}
               />
             </Grid>
             <Grid item size={{ xs: 12, sm: 6, md: 4, lg: 4 }}>
-              <SensorCard 
-                title="Gyroscope" 
-                value={gyro ? gyro[0].toFixed(2) : 0} 
-                unit="°/s" 
+              <SensorCard
+                title="Gyroscope"
+                value={gyro ? gyro[0].toFixed(2) : 0}
+                unit="°/s"
                 icon={RotateRightIcon}
                 iconBg="rgba(244, 67, 54, 0.1)"
                 onClick={() => handleCardClick({ sensorName: 'IMU Gyroscope', sensorKey: 'imuGyro' })}
               />
             </Grid>
             <Grid item size={{ xs: 12, sm: 6, md: 4, lg: 4 }}>
-              <SensorCard 
-                title="Pressure" 
-                value={pressure ? pressure.toFixed(1) : 0} 
-                unit="hPa" 
+              <SensorCard
+                title="Pressure"
+                value={pressure ? pressure.toFixed(1) : 0}
+                unit="hPa"
                 icon={CompressIcon}
                 iconBg="rgba(0, 188, 212, 0.1)"
                 onClick={() => handleCardClick({ sensorName: 'Pressure Sensor', sensorKey: 'pressure' })}
