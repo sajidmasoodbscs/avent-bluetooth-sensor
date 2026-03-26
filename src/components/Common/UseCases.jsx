@@ -63,7 +63,7 @@ const SensorCard = ({ title, icon: Icon, iconBg, onClick }) => (
                 justifyContent: "center"
             }}
         >
-            <ChevronRightIcon sx={{ color: "#ccc", fontSize: 20 }} />
+            <ChevronRightIcon sx={{ color: "#808080", fontSize: 20 }} />
         </Box>
     </Paper>
 );
