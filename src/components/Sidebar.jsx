@@ -9,10 +9,10 @@ import {
   Divider,
 } from "@mui/material";
 import DashboardIcon from "@mui/icons-material/Dashboard";
-//import CalendarTodayIcon from '@mui/icons-material/CalendarToday';
+// import CalendarTodayIcon from '@mui/icons-material/CalendarToday';
 // import SearchIcon from '@mui/icons-material/Search';
 import CloseIcon from "@mui/icons-material/Close";
-//import SettingsIcon from '@mui/icons-material/Settings';
+import SettingsIcon from '@mui/icons-material/Settings';
 import logo from "../assets/images/avnet_abacus.svg";
 
 import { useNavigate } from "react-router-dom";

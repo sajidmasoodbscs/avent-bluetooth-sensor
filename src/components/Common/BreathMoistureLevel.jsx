@@ -7,6 +7,8 @@ import SpeedIcon from '@mui/icons-material/Speed';
 import RotateRightIcon from '@mui/icons-material/RotateRight';
 import CompressIcon from '@mui/icons-material/Compress';
 import ChevronRightIcon from '@mui/icons-material/ChevronRight';
+import LightbulbIcon from '@mui/icons-material/Lightbulb';
+import LightbulbOutlinedIcon from '@mui/icons-material/LightbulbOutlined';
 import SensorDetailsModal from "../Modal/SensorDetailsModal";
 import { useNavigate } from "react-router-dom";
 
@@ -48,7 +50,7 @@ const SensorCard = ({ title, value, unit, icon: Icon, iconBg, onClick }) => (
         height: "56px"
       }}
     >
-      <Icon sx={{ color: iconBg ? "rgba(0,0,0,0.5)" : "#53ba64", fontSize: 28 }} />
+      <Icon sx={{ color: iconBg?.includes('255, 193, 7') ? "#ffc107" : (iconBg ? "rgba(0,0,0,0.5)" : "#53ba64"), fontSize: 28 }} />
     </Box>
 
     {/* Middle: Value & Label Stack */}
@@ -82,7 +84,7 @@ const SensorCard = ({ title, value, unit, icon: Icon, iconBg, onClick }) => (
   </Paper>
 );
 
-export default function BreathMoistureLevel({ temperature, humidity, irTemperature, accel, gyro, pressure, isUseCaseView }) {
+export default function BreathMoistureLevel({ temperature, humidity, irTemperature, accel, gyro, pressure, pir, isUseCaseView }) {
   const [modalOpen, setModalOpen] = useState(false);
   const [modalConfig, setModalConfig] = useState({ companyName: 'Nordic Sensor', sensorName: '', sensorKey: 'all', extraValues: null });
   const navigate = useNavigate();
@@ -160,6 +162,18 @@ export default function BreathMoistureLevel({ temperature, humidity, irTemperatu
                 icon={CompressIcon}
                 iconBg="rgba(0, 188, 212, 0.1)"
                 onClick={() => handleCardClick({ sensorName: 'Pressure Sensor', sensorKey: 'pressure' })}
+              />
+            </Grid>
+            <Grid item size={{ xs: 12, sm: 6, md: 4, lg: 4 }}>
+            </Grid>
+            <Grid item size={{ xs: 12, sm: 6, md: 4, lg: 4 }}>
+              <SensorCard
+                title="Pir"
+                value={pir !== undefined ? pir.toFixed(1) : 500}
+                unit="lux"
+                icon={pir > 100 ? LightbulbIcon : LightbulbOutlinedIcon}
+                iconBg={pir > 100 ? "rgba(255, 193, 7, 0.2)" : "rgba(0, 0, 0, 0.05)"}
+                onClick={() => handleCardClick({ sensorName: 'Pir Sensor', sensorKey: 'Pir' })}
               />
             </Grid>
           </>
