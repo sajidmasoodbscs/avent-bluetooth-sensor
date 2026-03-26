@@ -9,10 +9,10 @@ import {
   Divider,
 } from "@mui/material";
 import DashboardIcon from "@mui/icons-material/Dashboard";
-import CalendarTodayIcon from '@mui/icons-material/CalendarToday';
-import SearchIcon from '@mui/icons-material/Search';
+//import CalendarTodayIcon from '@mui/icons-material/CalendarToday';
+// import SearchIcon from '@mui/icons-material/Search';
 import CloseIcon from "@mui/icons-material/Close";
-import SettingsIcon from '@mui/icons-material/Settings';
+//import SettingsIcon from '@mui/icons-material/Settings';
 import logo from "../assets/images/avnet_abacus.svg";
 
 import { useNavigate } from "react-router-dom";
@@ -56,9 +56,9 @@ export default function Sidebar({ drawerOpen, setDrawerOpen }) {
 
       <Box sx={{ overflow: "auto" }}>
         <List>
-          <ListItem 
-            component="div" 
-            onClick={() => navigate("/dashboard")} 
+          <ListItem
+            component="div"
+            onClick={() => navigate("/dashboard")}
             sx={{ cursor: "pointer", "&:hover": { backgroundColor: "rgba(0,0,0,0.04)" } }}
           >
             <ListItemIcon>
@@ -66,10 +66,10 @@ export default function Sidebar({ drawerOpen, setDrawerOpen }) {
             </ListItemIcon>
             <ListItemText primary="Dashboard" />
           </ListItem>
-          
-          <ListItem 
-            component="div" 
-            onClick={() => navigate("/use-cases")} 
+
+          <ListItem
+            component="div"
+            onClick={() => navigate("/use-cases")}
             sx={{ cursor: "pointer", "&:hover": { backgroundColor: "rgba(0,0,0,0.04)" } }}
           >
             <ListItemIcon>
