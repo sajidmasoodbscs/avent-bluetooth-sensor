@@ -17,7 +17,7 @@ const SensorCard = ({ title, value, unit, icon: Icon, iconBg: iconBg, onClick })
       p: 2,
       backgroundColor: "#fff",
       color: "#000",
-      borderRadius: "16px",
+      borderRadius: "6px",
       height: "100%",
       width: "100%",
       border: "1px solid #f0f0f0",
