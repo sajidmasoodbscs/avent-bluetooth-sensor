@@ -2,7 +2,7 @@ import "./App.css";
 import { ThemeProvider } from "@mui/material/styles";
 import CssBaseline from "@mui/material/CssBaseline";
 import { Routes, Route, Navigate } from "react-router-dom";
-import routes from "./routes";
+//import routes from "./routes";
 import theme from "./theme";
 
 // ✅ Create a cache (no RTL)
