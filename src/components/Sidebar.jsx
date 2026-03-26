@@ -78,7 +78,7 @@ export default function Sidebar({ drawerOpen, setDrawerOpen }) {
             <ListItemText primary="Use Cases" />
           </ListItem>
 
-          <ListItem component="div" sx={{ cursor: "pointer", "&:hover": { backgroundColor: "rgba(0,0,0,0.04)" } }}>
+          {/* <ListItem component="div" sx={{ cursor: "pointer", "&:hover": { backgroundColor: "rgba(0,0,0,0.04)" } }}>
             <ListItemIcon>
               <SearchIcon sx={{ color: "#000" }} />
             </ListItemIcon>
@@ -95,7 +95,7 @@ export default function Sidebar({ drawerOpen, setDrawerOpen }) {
               <SettingsIcon sx={{ color: "#000" }} />
             </ListItemIcon>
             <ListItemText primary="Setting" />
-          </ListItem>
+          </ListItem> */}
         </List>
         <Divider sx={{ borderColor: "rgba(0,0,0,0.1)" }} />
         <List>

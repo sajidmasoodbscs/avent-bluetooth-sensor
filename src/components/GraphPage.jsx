@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
 import { Box, Typography, Button, Paper, Switch, Stack } from '@mui/material';
-import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { useBle } from '../ble/BleContext';
 
@@ -24,7 +23,6 @@ const mockData = [
 
 const GraphPage = () => {
   const { sensorId } = useParams();
-  const navigate = useNavigate();
   const { latestData, isConnected } = useBle();
   const [isRunning, setIsRunning] = useState(true);
 
@@ -33,15 +31,7 @@ const GraphPage = () => {
 
   return (
     <Box sx={{ maxWidth: '1400px', mx: 'auto', p: 1 }}>
-      <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
-        <Button 
-          startIcon={<ArrowBackIcon />} 
-          onClick={() => navigate(-1)}
-          sx={{ color: '#53ba64', fontWeight: 'bold' }}
-        >
-          Back
-        </Button>
-      </Box>
+  
 
       <Paper 
         elevation={0} 

@@ -29,22 +29,22 @@ const Hero = () => {
             </Typography>
           </Box>
           
-          {/* Large semi-transparent "A" logo background decoration */}
-          <Typography 
+          {/* Background decoration image */}
+          <Box
+            component="img"
+            src="/heroimage.svg"
             sx={{ 
               position: "absolute", 
-              right: -20, 
-              bottom: -40, 
-              fontSize: "250px", 
-              fontWeight: "900", 
-              color: "rgba(255,255,255,0.15)", 
+              right: 60, 
+              top: -40, 
+              width: "289px", 
+              height: "230px",
+              opacity: 0.8,
               userSelect: "none",
-              lineHeight: 1,
-              zIndex: 0
+              zIndex: 0,
+              filter: "brightness(0) invert(1)" // Ensure the image is white like the previous "A"
             }}
-          >
-            A
-          </Typography>
+          />
         </Box>
     
   );
