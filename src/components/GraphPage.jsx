@@ -89,7 +89,7 @@ const GraphPage = () => {
         elevation={0}
         sx={{
           p: 4,
-          borderRadius: '24px',
+          borderRadius: '6px',
           border: '1px solid #f0f0f0',
           mb: 4,
           backgroundColor: '#fff'
