@@ -89,7 +89,7 @@ const GraphPage = () => {
         elevation={0}
         sx={{
           p: 4,
-          borderRadius: '24px',
+          borderRadius: '6px',
           border: '1px solid #f0f0f0',
           mb: 4,
           backgroundColor: '#fff'
@@ -111,7 +111,7 @@ const GraphPage = () => {
               backgroundColor: '#f5f5f5',
               px: 2,
               py: 1,
-              borderRadius: '12px',
+              borderRadius: '6px',
               display: 'flex',
               alignItems: 'center',
               gap: 1
@@ -135,7 +135,7 @@ const GraphPage = () => {
               sx={{
                 backgroundColor: 'rgba(83, 186, 100, 0.1)',
                 p: '4px 8px',
-                borderRadius: '8px',
+                borderRadius: '4px',
                 display: 'flex',
                 alignItems: 'center',
                 gap: 1
@@ -156,13 +156,14 @@ const GraphPage = () => {
                 sx={{
                   backgroundColor: 'rgba(156, 39, 176, 0.1)',
                   p: '4px 8px',
-                  borderRadius: '8px',
+                  borderRadius: '4px',
                   display: 'flex',
                   alignItems: 'center',
                   gap: 1
                 }}
               >
-                <Typography variant="body2" sx={{ color: '#9c27b0', fontWeight: 'bold' }}>
+                
+                <Typography variant="body2" sx={{ color: '#7652BA', fontWeight: 'bold' }}>
                   {config.secondaryLabel}
                 </Typography>
                 <Box sx={{ backgroundColor: '#fff', px: 1, borderRadius: '4px', border: '1px solid rgba(156, 39, 176, 0.2)' }}>
@@ -250,9 +251,9 @@ const GraphPage = () => {
               <Line
                 type="linear"
                 dataKey="value2"
-                stroke="#9c27b0"
+                stroke="#7652BA"
                 strokeWidth={4}
-                dot={{ r: 4, fill: '#9c27b0', strokeWidth: 2, stroke: '#fff' }}
+                dot={{ r: 4, fill: '#7652BA', strokeWidth: 2, stroke: '#fff' }}
                 activeDot={{ r: 6, strokeWidth: 0 }}
               />
             </LineChart>
