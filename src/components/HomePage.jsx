@@ -2,10 +2,6 @@ import * as React from 'react';
 import Box from '@mui/material/Box';
 import BreathMoistureLevel from './Common/BreathMoistureLevel';
 import Hero from './Common/Hero';
-import ImuDashboardSection from './Common/ImuDashboardSection';
-
-
-
 import { useBle } from '../ble/BleContext';
 
 export default function HomePage() {
@@ -26,7 +22,6 @@ export default function HomePage() {
           pressure={latestData.pressure}
           pir={latestData.pir}
         />
-        <ImuDashboardSection />
       </Box>
     </>
   );

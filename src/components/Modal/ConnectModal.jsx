@@ -159,6 +159,9 @@ const ConnectModal = ({ onSensorData }) => {
           parsedData.gyro = [...(parsedData.gyro || []), floatValue];
           appendSensorPoint('imuGyro', floatValue);
           break;
+        case 0x07:
+          parsedData.pir = floatValue;
+          break;
         default:
           break;
       }

@@ -1,8 +1,14 @@
+import { useState } from "react";
 import { Box, Grid, Paper, Typography } from "@mui/material";
 import ThermostatIcon from '@mui/icons-material/Thermostat';
 import OpacityIcon from '@mui/icons-material/Opacity';
+import ThreeDRotationIcon from '@mui/icons-material/ThreeDRotation';
+import TerrainIcon from '@mui/icons-material/Terrain';
+import MicIcon from '@mui/icons-material/Mic';
+import SensorsIcon from '@mui/icons-material/Sensors';
 import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 import { useNavigate } from "react-router-dom";
+import UseCaseSensorModal from "../Modal/UseCaseSensorModal";
 
 const SensorCard = ({ title, icon: Icon, iconBg, onClick }) => (
     <Paper
@@ -29,7 +35,6 @@ const SensorCard = ({ title, icon: Icon, iconBg, onClick }) => (
         }}
         onClick={onClick}
     >
-        {/* Left: Icon Box */}
         <Box
             sx={{
                 backgroundColor: iconBg || "rgba(83, 186, 100, 0.1)",
@@ -45,14 +50,12 @@ const SensorCard = ({ title, icon: Icon, iconBg, onClick }) => (
             <Icon sx={{ color: iconBg ? "rgba(0,0,0,0.5)" : "#53ba64", fontSize: 28 }} />
         </Box>
 
-        {/* Middle: Value & Label Stack */}
         <Box sx={{ flexGrow: 1, display: "flex", flexDirection: "column" }}>
             <Typography variant="body2" sx={{ color: "#000", fontWeight: 500 }}>
                 {title}
             </Typography>
         </Box>
 
-        {/* Right: Chevron Box */}
         <Box
             sx={{
                 backgroundColor: "#f5f5f5",
@@ -68,11 +71,16 @@ const SensorCard = ({ title, icon: Icon, iconBg, onClick }) => (
     </Paper>
 );
 
-export default function UseCases({ temperature, humidity, irTemperature, accel, gyro, pressure, isUseCaseView }) {
+export default function UseCases() {
     const navigate = useNavigate();
+    const [modalKey, setModalKey] = useState(null);
 
-    const handleCardClick = (config) => {
-        navigate(`/use-cases/${config.sensorKey}`);
+    const handleRouteClick = (sensorKey) => {
+        navigate(`/use-cases/${sensorKey}`);
+    };
+
+    const handleModalClick = (key) => {
+        setModalKey(key);
     };
 
     return (
@@ -83,7 +91,7 @@ export default function UseCases({ temperature, humidity, irTemperature, accel, 
                         title="Digital Temperature Use Case"
                         icon={ThermostatIcon}
                         iconBg="rgba(156, 39, 176, 0.1)"
-                        onClick={() => handleCardClick({ sensorName: 'Digital Temperature Use Case', sensorKey: 'Digital-Temperature-Use-Case' })}
+                        onClick={() => handleRouteClick('Digital-Temperature-Use-Case')}
                     />
                 </Grid>
                 <Grid item size={{ xs: 12, sm: 6, md: 4, lg: 4 }}>
@@ -91,10 +99,48 @@ export default function UseCases({ temperature, humidity, irTemperature, accel, 
                         title="Digital Presssure Use Case"
                         icon={OpacityIcon}
                         iconBg="rgba(33, 150, 243, 0.1)"
-                        onClick={() => handleCardClick({ sensorName: 'Digital Presssure Use Case', sensorKey: 'Digital-Presssure-Use-Case' })}
+                        onClick={() => handleRouteClick('Digital-Presssure-Use-Case')}
+                    />
+                </Grid>
+                <Grid item size={{ xs: 12, sm: 6, md: 4, lg: 4 }}>
+                    <SensorCard
+                        title="Gyroscope Positioning Use Case"
+                        icon={ThreeDRotationIcon}
+                        iconBg="rgba(255, 152, 0, 0.12)"
+                        onClick={() => handleModalClick('gyro')}
+                    />
+                </Grid>
+                <Grid item size={{ xs: 12, sm: 6, md: 4, lg: 4 }}>
+                    <SensorCard
+                        title="Pressure Sensor Use Case"
+                        icon={TerrainIcon}
+                        iconBg="rgba(0, 150, 136, 0.12)"
+                        onClick={() => handleModalClick('pressure')}
+                    />
+                </Grid>
+                <Grid item size={{ xs: 12, sm: 6, md: 4, lg: 4 }}>
+                    <SensorCard
+                        title="Sound Mic Use Case"
+                        icon={MicIcon}
+                        iconBg="rgba(233, 30, 99, 0.12)"
+                        onClick={() => handleModalClick('mic')}
+                    />
+                </Grid>
+                <Grid item size={{ xs: 12, sm: 6, md: 4, lg: 4 }}>
+                    <SensorCard
+                        title="PIR Sensor Use Case"
+                        icon={SensorsIcon}
+                        iconBg="rgba(255, 152, 0, 0.15)"
+                        onClick={() => handleModalClick('pir')}
                     />
                 </Grid>
             </Grid>
+
+            <UseCaseSensorModal
+                open={Boolean(modalKey)}
+                useCaseKey={modalKey}
+                onClose={() => setModalKey(null)}
+            />
         </Box>
     );
 }
