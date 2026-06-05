@@ -1,6 +1,6 @@
-/** Matches mic_receiver.py: 16 kHz, mono, 16-bit PCM over BLE notifications. */
+/** 16 kHz, mono, 16-bit PCM — subscribe after sending GET:MIC (see bleProtocol.js). */
 export const MIC_SAMPLE_RATE = 16000;
-export const MIC_AUDIO_CHAR_UUID = 'a1b2c3d4-0002-4000-8000-00805f9b34fb';
+export { MIC_AUDIO_CHAR_UUID } from './bleProtocol';
 export const MIC_DEVICE_NAME = 'nRF54L_Mic';
 
 /** Decode little-endian PCM chunks (same layout as mic_receiver WAV frames). */

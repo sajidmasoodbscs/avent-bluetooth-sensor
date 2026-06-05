@@ -1,16 +1,13 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useBle } from '../ble/BleContext';
 import { ImuTrajectoryStore } from '../utils/imuPhysics';
+import { GET_COMMANDS, parseTLV, TLV } from '../utils/bleProtocol';
 
-/** Set to `false` when wiring real BLE samples from the device. */
-export const USE_DUMMY_BLE_DATA = true;
+/** Set to `true` only for offline UI demo without a device. */
+export const USE_DUMMY_BLE_DATA = false;
 
 const POLL_INTERVAL_S = 0.2;
 const POLL_MS = POLL_INTERVAL_S * 1000;
-
-const TAG_ACCEL = 0x04;
-const TAG_PRES = 0x05;
-const TAG_GYRO = 0x06;
 
 function getDummySampleAtCycle(i) {
   const t = i * POLL_INTERVAL_S;
@@ -24,32 +21,23 @@ function getDummySampleAtCycle(i) {
   return { ax, ay, az, gx, gy, gz, hpa };
 }
 
-function parseTlvBuffer(dataView) {
-  const view = dataView instanceof DataView ? dataView : new DataView(dataView);
+function parseImuTlv(dataView) {
+  const items = parseTLV(dataView);
   const tlv = { accel: [], gyro: [], pressure: null };
-  let offset = 0;
-  while (offset + 2 <= view.byteLength) {
-    const tag = view.getUint8(offset);
-    const length = view.getUint8(offset + 1);
-    offset += 2;
-    if (offset + length > view.byteLength) break;
-    if (length === 4) {
-      const floatValue = view.getFloat32(offset, true);
-      if (tag === TAG_ACCEL) tlv.accel.push(floatValue);
-      else if (tag === TAG_GYRO) tlv.gyro.push(floatValue);
-      else if (tag === TAG_PRES) tlv.pressure = floatValue;
-    }
-    offset += length;
+  for (const { type, value } of items) {
+    if (type === TLV.ACCEL) tlv.accel.push(value);
+    else if (type === TLV.GYRO) tlv.gyro.push(value);
+    else if (type === TLV.PRES) tlv.pressure = value;
   }
   return tlv;
 }
 
 /**
- * @param {'full'|'imu'|'pressure'} mode — full = IMU + pressure; imu = positioning only; pressure = GET:PRES only
- * @param {boolean} active — when false, polling pauses (e.g. modal closed)
+ * @param {'full'|'imu'|'pressure'} mode
+ * @param {boolean} active
  */
 export function useImuStream(mode = 'full', active = true) {
-  const { isConnected, withGattLock, tx, rx } = useBle();
+  const { isConnected, sendTextCommand } = useBle();
   const storeRef = useRef(new ImuTrajectoryStore());
   const cycleRef = useRef(0);
   const pollTimerRef = useRef(null);
@@ -114,7 +102,6 @@ export function useImuStream(mode = 'full', active = true) {
       return undefined;
     }
 
-    const encoder = new TextEncoder();
     let cancelled = false;
 
     const schedule = (delayMs) => {
@@ -128,57 +115,36 @@ export function useImuStream(mode = 'full', active = true) {
         return;
       }
 
-      let txChar = tx?.current;
-      let rxChar = rx?.current;
-      let attempts = 0;
-      while ((!txChar || !rxChar) && attempts < 40 && !cancelled) {
-        await new Promise((r) => setTimeout(r, 150));
-        txChar = tx?.current;
-        rxChar = rx?.current;
-        attempts += 1;
-      }
-
-      if (!txChar || !rxChar || cancelled) {
-        schedule(500);
-        return;
-      }
-
       const tStart = performance.now() / 1000;
       const cycle = cycleRef.current;
 
       try {
         inFlightRef.current = true;
-        await withGattLock(async () => {
-          if (mode !== 'pressure') {
-            await txChar.writeValue(encoder.encode('GET:IMU'));
-            await new Promise((r) => setTimeout(r, 15));
-            const imuBuf = await rxChar.readValue();
-            const imuTlv = parseTlvBuffer(imuBuf);
-            if (imuTlv.accel.length >= 3 && imuTlv.gyro.length >= 3) {
-              const nowS = performance.now() / 1000;
-              storeRef.current.pushImu(
-                imuTlv.accel[0],
-                imuTlv.accel[1],
-                imuTlv.accel[2],
-                imuTlv.gyro[0],
-                imuTlv.gyro[1],
-                imuTlv.gyro[2],
-                nowS,
-              );
-            }
+        if (mode !== 'pressure') {
+          const imuBuf = await sendTextCommand(GET_COMMANDS.IMU, 15);
+          const imuTlv = parseImuTlv(imuBuf);
+          if (imuTlv.accel.length >= 3 && imuTlv.gyro.length >= 3) {
+            const nowS = performance.now() / 1000;
+            storeRef.current.pushImu(
+              imuTlv.accel[0],
+              imuTlv.accel[1],
+              imuTlv.accel[2],
+              imuTlv.gyro[0],
+              imuTlv.gyro[1],
+              imuTlv.gyro[2],
+              nowS,
+            );
           }
+        }
 
-          if (mode !== 'imu' && cycle % 5 === 0) {
-            await txChar.writeValue(encoder.encode('GET:PRES'));
-            await new Promise((r) => setTimeout(r, 15));
-            const presBuf = await rxChar.readValue();
-            const presTlv = parseTlvBuffer(presBuf);
-            if (presTlv.pressure != null) {
-              const nowS = performance.now() / 1000;
-              storeRef.current.pushPressure(presTlv.pressure, nowS);
-            }
+        if (mode !== 'imu' && cycle % 5 === 0) {
+          const presBuf = await sendTextCommand(GET_COMMANDS.PRES, 15);
+          const presTlv = parseImuTlv(presBuf);
+          if (presTlv.pressure != null) {
+            const nowS = performance.now() / 1000;
+            storeRef.current.pushPressure(presTlv.pressure, nowS);
           }
-        });
+        }
       } catch (e) {
         console.warn('[IMU stream] poll error', e);
       } finally {
@@ -200,7 +166,7 @@ export function useImuStream(mode = 'full', active = true) {
         pollTimerRef.current = null;
       }
     };
-  }, [running, isConnected, tx, rx, withGattLock, refresh, mode]);
+  }, [running, isConnected, sendTextCommand, refresh, mode]);
 
   return {
     snap,

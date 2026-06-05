@@ -22,7 +22,7 @@ const Hero = () => {
         >
           <Box sx={{ position: "relative", zIndex: 1 }}>
             <Typography variant="h3" sx={{ fontWeight: "medium", mb: 1,fontSize:'26px' }}>
-              Welcome to Avnet, Abdullah!
+              Welcome to Avnet Abacus Sensor Evaluation Board V1.0
             </Typography>
             <Typography variant="h6" sx={{ opacity: 0.9, fontWeight: "normal",fontSize:'15px' }}>
               Your current readings are shown here

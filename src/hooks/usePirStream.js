@@ -1,30 +1,18 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useBle } from '../ble/BleContext';
+import { GET_COMMANDS, parseTLV, TLV } from '../utils/bleProtocol';
 
-export const USE_DUMMY_PIR_DATA = true;
+export const USE_DUMMY_PIR_DATA = false;
 export const PIR_THRESHOLD = 100;
 
-const TAG_PIR = 0x07;
 const POLL_MS = 500;
 
 function parsePirFromBuffer(dataView) {
-  const view = dataView instanceof DataView ? dataView : new DataView(dataView);
-  let offset = 0;
-  let pir = null;
-  while (offset + 2 <= view.byteLength) {
-    const tag = view.getUint8(offset);
-    const length = view.getUint8(offset + 1);
-    offset += 2;
-    if (offset + length > view.byteLength) break;
-    if (length === 4 && tag === TAG_PIR) {
-      pir = view.getFloat32(offset, true);
-    }
-    offset += length;
-  }
-  return pir;
+  const items = parseTLV(dataView);
+  const pirItem = items.find((item) => item.type === TLV.PIR);
+  return pirItem?.value ?? null;
 }
 
-/** Simulates someone walking into / out of PIR range. */
 function nextDummyPir(tick) {
   const cycle = tick % 240;
   if (cycle < 80) return 35 + Math.sin(tick * 0.15) * 8;
@@ -35,7 +23,7 @@ function nextDummyPir(tick) {
 }
 
 export function usePirStream(active = true) {
-  const { isConnected, withGattLock, tx, rx, latestData, setLatestData } = useBle();
+  const { isConnected, sendTextCommand, latestData, setLatestData } = useBle();
   const pollTimerRef = useRef(null);
   const inFlightRef = useRef(false);
   const tickRef = useRef(0);
@@ -73,7 +61,6 @@ export function usePirStream(active = true) {
       return undefined;
     }
 
-    const encoder = new TextEncoder();
     let cancelled = false;
 
     const poll = async () => {
@@ -83,25 +70,14 @@ export function usePirStream(active = true) {
         return;
       }
 
-      let txChar = tx?.current;
-      let rxChar = rx?.current;
-      if (!txChar || !rxChar) {
-        pollTimerRef.current = setTimeout(poll, 500);
-        return;
-      }
-
       try {
         inFlightRef.current = true;
-        await withGattLock(async () => {
-          await txChar.writeValue(encoder.encode('GET:ALL'));
-          await new Promise((r) => setTimeout(r, 200));
-          const value = await rxChar.readValue();
-          const pir = parsePirFromBuffer(value);
-          if (pir != null) {
-            setPirValue(pir);
-            setLatestData({ pir });
-          }
-        });
+        const value = await sendTextCommand(GET_COMMANDS.PIR, 200);
+        const pir = parsePirFromBuffer(value);
+        if (pir != null) {
+          setPirValue(pir);
+          setLatestData((prev) => ({ ...prev, pir }));
+        }
       } catch (e) {
         console.warn('[PIR] poll error', e);
       } finally {
@@ -115,7 +91,7 @@ export function usePirStream(active = true) {
       cancelled = true;
       if (pollTimerRef.current) clearTimeout(pollTimerRef.current);
     };
-  }, [active, isRunning, isConnected, tx, rx, withGattLock, setLatestData]);
+  }, [active, isRunning, isConnected, sendTextCommand, setLatestData]);
 
   useEffect(() => {
     if (USE_DUMMY_PIR_DATA || !active) return;

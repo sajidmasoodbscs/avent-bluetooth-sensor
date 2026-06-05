@@ -14,35 +14,61 @@ import { useBle } from '../../ble/BleContext';
 import { useImuStream } from '../../hooks/useImuStream';
 import { useMicStream } from '../../hooks/useMicStream';
 import { usePirStream } from '../../hooks/usePirStream';
+import { useAlertStream } from '../../hooks/useAlertStream';
 import ImuChartsGrid, { buildImuStatusText } from '../Common/ImuChartsGrid';
 import MicChartsGrid from '../Common/MicChartsGrid';
 import MicAudioControls from '../Common/MicAudioControls';
 import PirDetectionVisual from '../Common/PirDetectionVisual';
+import AlertVisual from '../Common/AlertVisual';
 
 const MODAL_CONFIG = {
   gyro: {
     title: 'Gyroscope Positioning Use Case',
     subtitle: 'Acceleration, gyroscope, and integrated 3D trajectory',
+    kind: 'imu',
     imuMode: 'imu',
     charts: ['accel', 'gyro', 'traj'],
   },
   pressure: {
     title: 'Pressure Sensor Use Case',
     subtitle: 'Barometric altitude from pressure (GET:PRES)',
+    kind: 'imu',
     imuMode: 'pressure',
     charts: ['alt'],
   },
   mic: {
     title: 'Sound Mic Use Case',
-    subtitle: '16 kHz mono PCM over BLE (nRF54L_Mic)',
-    imuMode: null,
-    charts: null,
+    subtitle: 'GET:MIC → PCM notifications · STOP:MIC returns to sensors',
+    kind: 'mic',
   },
   pir: {
     title: 'PIR Sensor Use Case',
-    subtitle: 'Passive infrared motion — human turns green when signal crosses threshold',
-    imuMode: null,
-    charts: null,
+    subtitle: 'Passive infrared motion via GET:PIR (int16 raw)',
+    kind: 'pir',
+  },
+  occupancy: {
+    title: 'Occupancy Alert',
+    subtitle: 'ALERT 0x08 — vacant / occupied (push, no polling)',
+    kind: 'alert',
+    alertKey: 'occupancy',
+  },
+  tilt: {
+    title: 'Tilt Alert',
+    subtitle: 'ALERT 0x09 — stable / warning / alarm',
+    kind: 'alert',
+    alertKey: 'tilt',
+  },
+  motion: {
+    title: 'Motion Alert',
+    subtitle: 'ALERT 0x0A — idle / motion / spike',
+    kind: 'alert',
+    alertKey: 'motion',
+  },
+  syringe: {
+    title: 'Syringe Pressure Alert',
+    subtitle: 'ALERT 0x0B — baseline / push / pull / spike',
+    kind: 'alert',
+    alertKey: 'syringe',
   },
 };
 
@@ -50,15 +76,17 @@ export default function UseCaseSensorModal({ open, useCaseKey, onClose }) {
   const config = MODAL_CONFIG[useCaseKey];
   const { isConnected } = useBle();
 
-  const imu = useImuStream(config?.imuMode ?? 'full', open && config?.imuMode != null);
+  const imu = useImuStream(config?.imuMode ?? 'full', open && config?.kind === 'imu');
   const mic = useMicStream(open && useCaseKey === 'mic');
   const pir = usePirStream(open && useCaseKey === 'pir');
+  const alert = useAlertStream(config?.alertKey, open && config?.kind === 'alert');
 
   if (!config) return null;
 
-  const isMic = useCaseKey === 'mic';
-  const isPir = useCaseKey === 'pir';
-  const stream = isMic ? mic : isPir ? pir : imu;
+  const stream = config.kind === 'mic' ? mic
+    : config.kind === 'pir' ? pir
+      : config.kind === 'alert' ? alert
+        : imu;
 
   return (
     <Modal open={open} onClose={onClose}>
@@ -99,22 +127,40 @@ export default function UseCaseSensorModal({ open, useCaseKey, onClose }) {
               </Typography>
               <Switch checked={isConnected} color="success" size="small" disabled />
             </Paper>
-            <Button variant="outlined" size="small" onClick={stream.reset}>
-              {stream.useDummy ? 'Reset demo' : 'Clear'}
-            </Button>
-            <Button
-              variant="contained"
-              size="small"
-              color={stream.isRunning ? 'warning' : 'success'}
-              onClick={() => stream.setIsRunning((v) => !v)}
-              disabled={!stream.useDummy && !isConnected}
-            >
-              {stream.isRunning ? 'Pause' : 'Resume'}
-            </Button>
+            {config.kind !== 'alert' && (
+              <>
+                <Button variant="outlined" size="small" onClick={stream.reset}>
+                  {stream.useDummy ? 'Reset demo' : 'Clear'}
+                </Button>
+                <Button
+                  variant="contained"
+                  size="small"
+                  color={stream.isRunning ? 'warning' : 'success'}
+                  onClick={() => stream.setIsRunning((v) => !v)}
+                  disabled={!stream.useDummy && !isConnected}
+                >
+                  {stream.isRunning ? 'Pause' : 'Resume'}
+                </Button>
+              </>
+            )}
           </Stack>
         </Box>
 
-        {isPir ? (
+        {config.kind === 'alert' ? (
+          <>
+            <AlertVisual
+              alertKey={config.alertKey}
+              state={alert.state}
+              label={alert.label}
+              isConnected={isConnected}
+            />
+            <Typography variant="body2" sx={{ color: '#8b949e', mt: 2, textAlign: 'center' }}>
+              {isConnected
+                ? 'Listening on ALERT characteristic — updates when device state changes.'
+                : 'Connect the sensor to receive live alerts.'}
+            </Typography>
+          </>
+        ) : config.kind === 'pir' ? (
           <>
             <PirDetectionVisual
               pirValue={pir.pirValue}
@@ -129,7 +175,7 @@ export default function UseCaseSensorModal({ open, useCaseKey, onClose }) {
                 : `Live BLE · Signal ${pir.pirValue.toFixed(0)} · Threshold ${pir.threshold}`}
             </Typography>
           </>
-        ) : isMic ? (
+        ) : config.kind === 'mic' ? (
           <>
             <MicAudioControls
               isCapturing={mic.isCapturing}
@@ -150,9 +196,9 @@ export default function UseCaseSensorModal({ open, useCaseKey, onClose }) {
               stats={mic.stats}
               useDummy={mic.useDummy}
             />
-            {mic.useDummy && (
+            {!isConnected && (
               <Typography variant="caption" sx={{ color: '#888', display: 'block', mt: 1, textAlign: 'center' }}>
-                Demo mode: synthetic speech-like audio — no device needed. For real mic BLE, set USE_DUMMY_MIC_DATA to false in useMicStream.js.
+                Connect device — mic mode sends GET:MIC and subscribes to PCM notifications.
               </Typography>
             )}
           </>

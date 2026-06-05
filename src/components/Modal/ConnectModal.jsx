@@ -2,29 +2,74 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Box, Modal, Typography, Button } from "@mui/material";
 import { useBle } from '../../ble/BleContext';
 import { appendSensorPoint } from '../../utils/storage';
+import {
+  BLE_SERVICE_UUID,
+  BLE_TX_UUID,
+  BLE_RX_UUID,
+  BLE_ALERT_UUID,
+  GET_COMMANDS,
+  parseTLV,
+  tlvItemsToSensorData,
+  parseAlertNotification,
+} from '../../utils/bleProtocol';
 
 const ConnectModal = ({ onSensorData }) => {
   const [open, setOpen] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
   const [isScanning, setIsScanning] = useState(false);
   const [reconnect, setReconnect] = useState(false);
-  const [server, setServer] = useState(null);
   const pollingTimeoutRef = useRef(null);
+  const alertHandlerRef = useRef(null);
   const ble = useBle();
 
-  const SERVICE_UUID = '12345678-1234-1234-1234-123456789abc';
-  const TX_CHARACTERISTIC_UUID = '12345678-1234-1234-1234-123456789abd';
-  const RX_CHARACTERISTIC_UUID = '12345678-1234-1234-1234-123456789abe';
-  if (server) {
-        console.log(server);
-  }
   useEffect(() => {
     const isConnectedBefore = localStorage.getItem('bleConnected') === 'true';
     setReconnect(isConnectedBefore);
-    setOpen(true); // Show modal on load
+    setOpen(true);
+  }, []);
+
+  useEffect(() => () => {
+    if (pollingTimeoutRef.current) clearTimeout(pollingTimeoutRef.current);
   }, []);
 
   const handleClose = () => setOpen(false);
+
+  const handlePollResponse = (dataView) => {
+    const items = parseTLV(dataView);
+    const parsedData = tlvItemsToSensorData(items);
+
+    if (parsedData.temperature != null) appendSensorPoint('temperature', parsedData.temperature);
+    if (parsedData.humidity != null) appendSensorPoint('humidity', parsedData.humidity);
+    if (parsedData.irTemperature != null) appendSensorPoint('irTemperature', parsedData.irTemperature);
+    if (parsedData.pressure != null) appendSensorPoint('pressure', parsedData.pressure);
+    if (Array.isArray(parsedData.accel)) {
+      parsedData.accel.forEach((v) => appendSensorPoint('imuAccel', v));
+    }
+    if (Array.isArray(parsedData.gyro)) {
+      parsedData.gyro.forEach((v) => appendSensorPoint('imuGyro', v));
+    }
+
+    if (Object.keys(parsedData).length > 0) {
+      ble.setLatestData((prev) => ({ ...prev, ...parsedData }));
+    }
+    if (onSensorData) onSensorData(parsedData);
+    setOpen(false);
+  };
+
+  const subscribeAlerts = async (alertCharacteristic) => {
+    if (alertHandlerRef.current) {
+      alertCharacteristic.removeEventListener('characteristicvaluechanged', alertHandlerRef.current);
+    }
+
+    const handler = (event) => {
+      const alert = parseAlertNotification(event.target.value);
+      if (alert) ble.updateAlert(alert.key, alert.state);
+    };
+    alertHandlerRef.current = handler;
+
+    await alertCharacteristic.startNotifications();
+    alertCharacteristic.addEventListener('characteristicvaluechanged', handler);
+  };
 
   const handleScanDevices = async () => {
     setErrorMessage('');
@@ -32,146 +77,98 @@ const ConnectModal = ({ onSensorData }) => {
 
     try {
       const device = await navigator.bluetooth.requestDevice({
-        acceptAllDevices: true,
-        optionalServices: [SERVICE_UUID],
+        filters: [{ services: [BLE_SERVICE_UUID] }],
+        optionalServices: [BLE_SERVICE_UUID],
       });
 
       const connectedServer = await device.gatt.connect();
-      setServer(connectedServer);
       localStorage.setItem('bleConnected', 'true');
 
       await startDataStream(connectedServer);
     } catch (error) {
       console.error('BLE Error:', error);
       localStorage.removeItem('bleConnected');
+      ble.clearConnection();
       setErrorMessage(error.message || 'Bluetooth connection failed');
     } finally {
       setIsScanning(false);
     }
   };
 
-  const startDataStream = async (server) => {
+  const startDataStream = async (connectedServer) => {
     try {
-      const service = await server.getPrimaryService(SERVICE_UUID);
-      const txCharacteristic = await service.getCharacteristic(TX_CHARACTERISTIC_UUID);
-      const rxCharacteristic = await service.getCharacteristic(RX_CHARACTERISTIC_UUID);
+      const service = await connectedServer.getPrimaryService(BLE_SERVICE_UUID);
+      const txCharacteristic = await service.getCharacteristic(BLE_TX_UUID);
+      const rxCharacteristic = await service.getCharacteristic(BLE_RX_UUID);
+      const alertCharacteristic = await service.getCharacteristic(BLE_ALERT_UUID);
 
-      // expose into BLE context
-      ble.setConnection({ server, service, tx: txCharacteristic, rx: rxCharacteristic });
+      ble.setConnection({
+        server: connectedServer,
+        service,
+        tx: txCharacteristic,
+        rx: rxCharacteristic,
+        alert: alertCharacteristic,
+      });
 
-      const cmd = new TextEncoder().encode('GET:ALL');
-      
+      await subscribeAlerts(alertCharacteristic);
+
+      const cmd = new TextEncoder().encode(GET_COMMANDS.ALL);
       let consecutiveErrors = 0;
+
       const pollData = async () => {
-        if (!server.connected) return;
+        if (!connectedServer.connected) return;
 
         try {
-          // Skip global polling if a sensor modal is actively polling specific GET commands
-          if (ble.activeSensorKey) {
+          if (ble.activeSensorKeyRef?.current || ble.micModeActiveRef?.current) {
             pollingTimeoutRef.current = setTimeout(pollData, 500);
             return;
           }
+
           await ble.withGattLock(async () => {
             await txCharacteristic.writeValue(cmd);
-            await new Promise(resolve => setTimeout(resolve, 300));
+            await new Promise((resolve) => setTimeout(resolve, 300));
             const value = await rxCharacteristic.readValue();
-            handleNotification({ target: value });
+            handlePollResponse(value);
           });
-          consecutiveErrors = 0; // Reset error count on success
-          pollingTimeoutRef.current = setTimeout(pollData, 500); // Keep polling
+          consecutiveErrors = 0;
+          pollingTimeoutRef.current = setTimeout(pollData, 500);
         } catch (error) {
           console.error('Polling error:', error);
-          consecutiveErrors++;
-          
-          // Check if it's a Linux/Ubuntu specific error
-          const isLinuxError = error.name === 'NotSupportedError' || 
-                              error.message?.includes('GATT operation failed') ||
-                              error.message?.includes('unknown reason');
-          
+          consecutiveErrors += 1;
+
+          const isLinuxError = error.name === 'NotSupportedError'
+            || error.message?.includes('GATT operation failed')
+            || error.message?.includes('unknown reason');
+
           if (isLinuxError && consecutiveErrors < 3) {
-            // For Linux, try with longer delays and different approach
-            console.log(`[Linux] Retrying after error (attempt ${consecutiveErrors}/3)...`);
             pollingTimeoutRef.current = setTimeout(pollData, 1000 + (consecutiveErrors * 500));
             return;
           }
-          
-          // Only prompt reconnect if actually disconnected or too many errors
+
           try {
-            if (!server.connected || consecutiveErrors >= 5) {
+            if (!connectedServer.connected || consecutiveErrors >= 5) {
               if (isLinuxError) {
                 setErrorMessage('Bluetooth error on Linux. Try: 1) Chrome flags: chrome://flags/#enable-experimental-web-platform-features 2) Run Chrome with: --enable-features=WebBluetooth');
               } else {
                 setErrorMessage('Device disconnected or powered off. Please reconnect your sensor.');
               }
               localStorage.removeItem('bleConnected');
+              ble.clearConnection();
               setOpen(true);
               return;
             }
           } catch (_) {
             // fallthrough
           }
-          // Otherwise, retry after a short delay without showing modal
           pollingTimeoutRef.current = setTimeout(pollData, 800);
         }
       };
 
-      pollData(); // Start polling
+      pollData();
     } catch (err) {
       console.error('startDataStream error:', err);
       setErrorMessage('Failed to start data stream. Please try again.');
     }
-  };
-
-  const handleNotification = (event) => {
-    const buffer = new DataView(event.target.buffer || event.target.value.buffer);
-    let offset = 0;
-    const parsedData = {};
-
-    while (offset < buffer.byteLength) {
-      const type = buffer.getUint8(offset);
-      const length = buffer.getUint8(offset + 1);
-      const valueBytes = new DataView(buffer.buffer, offset + 2, length);
-      const floatValue = valueBytes.getFloat32(0, true);
-      offset += 2 + length;
-
-      switch (type) {
-        case 0x01:
-          parsedData.temperature = floatValue;
-          appendSensorPoint('temperature', floatValue);
-          break;
-        case 0x02:
-          parsedData.humidity = floatValue;
-          appendSensorPoint('humidity', floatValue);
-          break;
-        case 0x03:
-          parsedData.irTemperature = floatValue;
-          appendSensorPoint('irTemperature', floatValue);
-          break;
-        case 0x04:
-          parsedData.accel = [...(parsedData.accel || []), floatValue];
-          appendSensorPoint('imuAccel', floatValue);
-          break;
-        case 0x05:
-          parsedData.pressure = floatValue;
-          appendSensorPoint('pressure', floatValue);
-          break;
-        case 0x06:
-          parsedData.gyro = [...(parsedData.gyro || []), floatValue];
-          appendSensorPoint('imuGyro', floatValue);
-          break;
-        case 0x07:
-          parsedData.pir = floatValue;
-          break;
-        default:
-          break;
-      }
-    }
-
-    if (Object.keys(parsedData).length > 0) {
-      ble.setLatestData(parsedData);
-    }
-    if (onSensorData) onSensorData(parsedData);
-    setOpen(false); // Close modal once connected and receiving data
   };
 
   return (

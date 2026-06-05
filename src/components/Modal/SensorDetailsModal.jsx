@@ -6,6 +6,7 @@ import StopIcon from '@mui/icons-material/Stop';
 import SplineAreaChart from '../Common/SplineAreaChart';
 import { useBle } from '../../ble/BleContext';
 import { readSensorHistory, appendSensorPoint } from '../../utils/storage';
+import { SENSOR_GET_CMD, parseTLV, tlvItemsToSensorData } from '../../utils/bleProtocol';
 
 const SENSOR_CMD = {
   temperature: { start: [0x01, 0x01], stop: [0x01, 0x00] },
@@ -14,20 +15,26 @@ const SENSOR_CMD = {
   imuAccel: { start: [0x03, 0x01], stop: [0x03, 0x00] },
   imuGyro: { start: [0x03, 0x01], stop: [0x03, 0x00] },
   pressure: { start: [0x04, 0x01], stop: [0x04, 0x00] },
+  pir: { start: [0x05, 0x01], stop: [0x05, 0x00] },
   all: { start: [0x7f, 0x01], stop: [0x7f, 0x00] },
-};
-
-const SENSOR_GET_CMD = {
-  temperature: 'GET:TEMP',
-  humidity: 'GET:HUMID',
-  irTemperature: 'GET:IRTEMP',
-  imuAccel: 'GET:IMU',
-  imuGyro: 'GET:IMU',
-  pressure: 'GET:PRES',
 };
 
 function formatHistoryToChart(points) {
   return points.map(p => ({ time: new Date(p.t).toLocaleTimeString([], { hour12: false }), value: p.v }));
+}
+
+function recordParsedData(parsedData, sensorKey) {
+  if (parsedData.temperature != null) appendSensorPoint('temperature', parsedData.temperature);
+  if (parsedData.humidity != null) appendSensorPoint('humidity', parsedData.humidity);
+  if (parsedData.irTemperature != null) appendSensorPoint('irTemperature', parsedData.irTemperature);
+  if (parsedData.pressure != null) appendSensorPoint('pressure', parsedData.pressure);
+  if (parsedData.pir != null) appendSensorPoint('pir', parsedData.pir);
+  if (Array.isArray(parsedData.accel)) {
+    parsedData.accel.forEach((v) => appendSensorPoint('imuAccel', v));
+  }
+  if (Array.isArray(parsedData.gyro)) {
+    parsedData.gyro.forEach((v) => appendSensorPoint('imuGyro', v));
+  }
 }
 
 export default function SensorDetailsModal({ open, onClose, companyName, sensorName, sensorKey, extraValues }) {
@@ -36,9 +43,7 @@ export default function SensorDetailsModal({ open, onClose, companyName, sensorN
     setLatestData,
     setActiveSensorKey,
     writeCommand,
-    withGattLock,
-    tx,
-    rx,
+    sendTextCommand,
     isConnected,
   } = useBle();
 
@@ -104,7 +109,7 @@ export default function SensorDetailsModal({ open, onClose, companyName, sensorN
   }, [open, sensorKey, setActiveSensorKey]);
 
   useEffect(() => {
-    if (!open || !isStreaming) {
+    if (!open || !isStreaming || !isConnected) {
       if (pollTimerRef.current) {
         clearTimeout(pollTimerRef.current);
         pollTimerRef.current = null;
@@ -113,52 +118,13 @@ export default function SensorDetailsModal({ open, onClose, companyName, sensorN
     }
 
     let cancelled = false;
-    const encoder = new TextEncoder();
 
     const parseAndRecord = (dataView) => {
-      const buffer = new DataView(dataView.buffer);
-      let offset = 0;
-      const parsedData = {};
-
-      while (offset < buffer.byteLength) {
-        const type = buffer.getUint8(offset);
-        const length = buffer.getUint8(offset + 1);
-        const valueBytes = new DataView(buffer.buffer, offset + 2, length);
-        const floatValue = valueBytes.getFloat32(0, true);
-        offset += 2 + length;
-
-        switch (type) {
-          case 0x01:
-            parsedData.temperature = floatValue;
-            appendSensorPoint('temperature', floatValue);
-            break;
-          case 0x02:
-            parsedData.humidity = floatValue;
-            appendSensorPoint('humidity', floatValue);
-            break;
-          case 0x03:
-            parsedData.irTemperature = floatValue;
-            appendSensorPoint('irTemperature', floatValue);
-            break;
-          case 0x04:
-            parsedData.accel = [...(parsedData.accel || []), floatValue];
-            appendSensorPoint('imuAccel', floatValue);
-            break;
-          case 0x05:
-            parsedData.pressure = floatValue;
-            appendSensorPoint('pressure', floatValue);
-            break;
-          case 0x06:
-            parsedData.gyro = [...(parsedData.gyro || []), floatValue];
-            appendSensorPoint('imuGyro', floatValue);
-            break;
-          default:
-            break;
-        }
-      }
-
+      const items = parseTLV(dataView);
+      const parsedData = tlvItemsToSensorData(items);
       if (Object.keys(parsedData).length > 0) {
-        setLatestData(parsedData);
+        recordParsedData(parsedData, sensorKey);
+        setLatestData((prev) => ({ ...prev, ...parsedData }));
         setChartData(formatHistoryToChart(readSensorHistory(sensorKey)));
       }
     };
@@ -172,30 +138,9 @@ export default function SensorDetailsModal({ open, onClose, companyName, sensorN
 
       try {
         inFlightRef.current = true;
-        let txChar = tx?.current;
-        let rxChar = rx?.current;
-        let attempts = 0;
-
-        while ((!txChar || !rxChar) && attempts < 40 && !cancelled) {
-          await new Promise(r => setTimeout(r, 150));
-          txChar = tx?.current;
-          rxChar = rx?.current;
-          attempts += 1;
-        }
-
-        if (!txChar || !rxChar || cancelled) {
-          pollTimerRef.current = setTimeout(poll, 500);
-          return;
-        }
-
-        const cmd = SENSOR_GET_CMD[sensorKey] || 'GET:ALL';
-
-        await withGattLock(async () => {
-          await txChar.writeValue(encoder.encode(cmd));
-          await new Promise(r => setTimeout(r, 250));
-          const value = await rxChar.readValue();
-          parseAndRecord(value);
-        });
+        const cmd = SENSOR_GET_CMD[sensorKey] || SENSOR_GET_CMD.all;
+        const value = await sendTextCommand(cmd, 250);
+        parseAndRecord(value);
       } catch (err) {
         console.warn('[Modal] Poll error', err);
       } finally {
@@ -215,7 +160,7 @@ export default function SensorDetailsModal({ open, onClose, companyName, sensorN
         pollTimerRef.current = null;
       }
     };
-  }, [open, isStreaming, sensorKey, tx, rx, withGattLock, setLatestData]);
+  }, [open, isStreaming, sensorKey, sendTextCommand, setLatestData, isConnected]);
 
   const handleStart = async () => {
     const cmd = SENSOR_CMD[sensorKey]?.start || SENSOR_CMD.all.start;
@@ -339,5 +284,3 @@ export default function SensorDetailsModal({ open, onClose, companyName, sensorN
     </Modal>
   );
 }
-
-

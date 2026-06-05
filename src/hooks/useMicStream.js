@@ -1,7 +1,11 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { useBle } from '../ble/BleContext';
+import {
+  GET_COMMANDS,
+  MIC_AUDIO_CHAR_UUID,
+} from '../utils/bleProtocol';
 import {
   MIC_SAMPLE_RATE,
-  MIC_AUDIO_CHAR_UUID,
   pcmBytesToInt16Array,
   downsampleWaveform,
   buildRmsEnvelope,
@@ -12,20 +16,29 @@ import {
   playPcmSamples,
 } from '../utils/micAudio';
 
-/** Demo stream when no mic BLE characteristic is subscribed. */
-export const USE_DUMMY_MIC_DATA = true;
+export const USE_DUMMY_MIC_DATA = false;
 
 const MAX_DISPLAY_SAMPLES = MIC_SAMPLE_RATE * 3;
 const DUMMY_CHUNK_SAMPLES = 320;
 const DUMMY_CHUNK_MS = (DUMMY_CHUNK_SAMPLES / MIC_SAMPLE_RATE) * 1000;
 
 export function useMicStream(active = true) {
+  const {
+    isConnected,
+    writeCommand,
+    withGattLock,
+    service,
+    setMicModeActive,
+  } = useBle();
+
   const pcmRef = useRef(new Int16Array(0));
   const captureRef = useRef(new Int16Array(0));
   const isCapturingRef = useRef(false);
   const dummyStateRef = useRef(null);
   const dummyTimerRef = useRef(null);
   const playerRef = useRef(null);
+  const micCharRef = useRef(null);
+  const notifyHandlerRef = useRef(null);
 
   const [isRunning, setIsRunning] = useState(true);
   const [isCapturing, setIsCapturing] = useState(false);
@@ -180,24 +193,72 @@ export function useMicStream(active = true) {
       return undefined;
     }
 
-    if (!USE_DUMMY_MIC_DATA) {
-      return undefined;
+    if (USE_DUMMY_MIC_DATA) {
+      if (startRef.current == null) startRef.current = performance.now();
+      dummyTimerRef.current = setInterval(() => {
+        const chunk = generateDummyPcmChunk(DUMMY_CHUNK_SAMPLES, dummyStateRef);
+        handleNotification(new Uint8Array(chunk.buffer));
+      }, DUMMY_CHUNK_MS);
+      return () => {
+        if (dummyTimerRef.current) {
+          clearInterval(dummyTimerRef.current);
+          dummyTimerRef.current = null;
+        }
+      };
     }
 
-    if (startRef.current == null) startRef.current = performance.now();
+    if (!isConnected) return undefined;
 
-    dummyTimerRef.current = setInterval(() => {
-      const chunk = generateDummyPcmChunk(DUMMY_CHUNK_SAMPLES, dummyStateRef);
-      handleNotification(new Uint8Array(chunk.buffer));
-    }, DUMMY_CHUNK_MS);
+    let cancelled = false;
 
-    return () => {
-      if (dummyTimerRef.current) {
-        clearInterval(dummyTimerRef.current);
-        dummyTimerRef.current = null;
+    const startMicBle = async () => {
+      try {
+        await withGattLock(async () => {
+          await writeCommand(new TextEncoder().encode(GET_COMMANDS.MIC));
+        });
+        setMicModeActive(true);
+
+        const svc = service?.current;
+        if (!svc || cancelled) return;
+
+        const micChar = await svc.getCharacteristic(MIC_AUDIO_CHAR_UUID);
+        const handler = (event) => handleNotification(event.target.value);
+        notifyHandlerRef.current = handler;
+        micCharRef.current = micChar;
+
+        await micChar.startNotifications();
+        micChar.addEventListener('characteristicvaluechanged', handler);
+      } catch (e) {
+        console.warn('[Mic] BLE subscribe failed', e);
+        setMicModeActive(false);
       }
     };
-  }, [active, isRunning, handleNotification]);
+
+    startMicBle();
+
+    return () => {
+      cancelled = true;
+      const micChar = micCharRef.current;
+      if (micChar && notifyHandlerRef.current) {
+        micChar.removeEventListener('characteristicvaluechanged', notifyHandlerRef.current);
+        micChar.stopNotifications().catch(() => {});
+      }
+      micCharRef.current = null;
+      notifyHandlerRef.current = null;
+      withGattLock(async () => {
+        await writeCommand(new TextEncoder().encode(GET_COMMANDS.STOP_MIC));
+      }).catch(() => {}).finally(() => setMicModeActive(false));
+    };
+  }, [
+    active,
+    isRunning,
+    isConnected,
+    handleNotification,
+    writeCommand,
+    withGattLock,
+    service,
+    setMicModeActive,
+  ]);
 
   useEffect(() => () => {
     if (playerRef.current) playerRef.current.stop();

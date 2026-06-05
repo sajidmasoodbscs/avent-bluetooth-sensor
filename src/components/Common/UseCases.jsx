@@ -6,6 +6,10 @@ import ThreeDRotationIcon from '@mui/icons-material/ThreeDRotation';
 import TerrainIcon from '@mui/icons-material/Terrain';
 import MicIcon from '@mui/icons-material/Mic';
 import SensorsIcon from '@mui/icons-material/Sensors';
+import PersonIcon from '@mui/icons-material/Person';
+import ScreenRotationIcon from '@mui/icons-material/ScreenRotation';
+import VibrationIcon from '@mui/icons-material/Vibration';
+import MedicalServicesIcon from '@mui/icons-material/MedicalServices';
 import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 import { useNavigate } from "react-router-dom";
 import UseCaseSensorModal from "../Modal/UseCaseSensorModal";
@@ -132,6 +136,38 @@ export default function UseCases() {
                         icon={SensorsIcon}
                         iconBg="rgba(255, 152, 0, 0.15)"
                         onClick={() => handleModalClick('pir')}
+                    />
+                </Grid>
+                <Grid item size={{ xs: 12, sm: 6, md: 4, lg: 4 }}>
+                    <SensorCard
+                        title="Occupancy Alert"
+                        icon={PersonIcon}
+                        iconBg="rgba(76, 175, 80, 0.15)"
+                        onClick={() => handleModalClick('occupancy')}
+                    />
+                </Grid>
+                <Grid item size={{ xs: 12, sm: 6, md: 4, lg: 4 }}>
+                    <SensorCard
+                        title="Tilt Alert"
+                        icon={ScreenRotationIcon}
+                        iconBg="rgba(63, 81, 181, 0.12)"
+                        onClick={() => handleModalClick('tilt')}
+                    />
+                </Grid>
+                <Grid item size={{ xs: 12, sm: 6, md: 4, lg: 4 }}>
+                    <SensorCard
+                        title="Motion Alert"
+                        icon={VibrationIcon}
+                        iconBg="rgba(255, 87, 34, 0.12)"
+                        onClick={() => handleModalClick('motion')}
+                    />
+                </Grid>
+                <Grid item size={{ xs: 12, sm: 6, md: 4, lg: 4 }}>
+                    <SensorCard
+                        title="Syringe Pressure Alert"
+                        icon={MedicalServicesIcon}
+                        iconBg="rgba(156, 39, 176, 0.12)"
+                        onClick={() => handleModalClick('syringe')}
                     />
                 </Grid>
             </Grid>

@@ -2,17 +2,17 @@ import * as React from 'react';
 import Box from '@mui/material/Box';
 import BreathMoistureLevel from './Common/BreathMoistureLevel';
 import Hero from './Common/Hero';
+import AlertsStatusBar from './Common/AlertsStatusBar';
 import { useBle } from '../ble/BleContext';
 
 export default function HomePage() {
   const { latestData } = useBle();
-  latestData.pir = 90;
 
   return (
     <>
       <Box sx={{ maxWidth: '1400px', mx: 'auto', p: 1 }}>
-        {/* Figma Hero Section */}
         <Hero />
+        <AlertsStatusBar />
         <BreathMoistureLevel
           temperature={latestData.temperature}
           humidity={latestData.humidity}
