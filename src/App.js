@@ -12,6 +12,7 @@ import theme from "./theme";
 import HomePage from "./components/HomePage";
 import UseCasesPage from "./components/UseCasesPage";
 import GraphPage from "./components/GraphPage";
+import DataSheetPage from "./components/DataSheetPage";
 import DashboardLayout from "./layouts/dashboard";
 
 function App() {
@@ -23,6 +24,7 @@ function App() {
           <Route path="/dashboard" element={<HomePage />} />
           <Route path="/use-cases" element={<UseCasesPage />} />
           <Route path="/use-cases/:sensorId" element={<GraphPage />} />
+          <Route path="/data-sheet" element={<DataSheetPage />} />
           <Route path="/" element={<Navigate to="/dashboard" />} />
         </Route>
         <Route path="*" element={<Navigate to="/dashboard" />} />

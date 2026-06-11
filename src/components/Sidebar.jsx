@@ -17,8 +17,11 @@ import logo from "../assets/images/avnet_abacus.svg";
 
 import { useNavigate } from "react-router-dom";
 import CasesIcon from '@mui/icons-material/Assignment';
+import DescriptionIcon from '@mui/icons-material/Description';
+import MenuBookIcon from '@mui/icons-material/MenuBook';
 
 const drawerWidth = 240;
+const LINE_CARD_URL = 'https://library.ebv.com/view/560428678/74/#zoom=true';
 
 export default function Sidebar({ drawerOpen, setDrawerOpen }) {
   const navigate = useNavigate();
@@ -76,6 +79,35 @@ export default function Sidebar({ drawerOpen, setDrawerOpen }) {
               <CasesIcon sx={{ color: "#000" }} />
             </ListItemIcon>
             <ListItemText primary="Use Cases" />
+          </ListItem>
+
+          <ListItem
+            component="div"
+            onClick={() => navigate("/data-sheet")}
+            sx={{ cursor: "pointer", "&:hover": { backgroundColor: "rgba(0,0,0,0.04)" } }}
+          >
+            <ListItemIcon>
+              <DescriptionIcon sx={{ color: "#000" }} />
+            </ListItemIcon>
+            <ListItemText primary="Data Sheet" />
+          </ListItem>
+
+          <ListItem
+            component="a"
+            href={LINE_CARD_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+            sx={{
+              cursor: "pointer",
+              textDecoration: "none",
+              color: "inherit",
+              "&:hover": { backgroundColor: "rgba(0,0,0,0.04)" },
+            }}
+          >
+            <ListItemIcon>
+              <MenuBookIcon sx={{ color: "#000" }} />
+            </ListItemIcon>
+            <ListItemText primary="Sensor and Wireless Line Card Page" />
           </ListItem>
 
           {/* <ListItem component="div" sx={{ cursor: "pointer", "&:hover": { backgroundColor: "rgba(0,0,0,0.04)" } }}>
