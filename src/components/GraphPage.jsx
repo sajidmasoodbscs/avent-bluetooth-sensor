@@ -8,7 +8,7 @@ import { readSensorHistory } from '../utils/storage';
 
 const useCaseMap = {
   'Digital-Temperature-Use-Case': {
-    title: 'Digital Temperature Use Case',
+    title: 'Touchless Surface Temperature Measurement',
     primaryKey: 'temperature',
     secondaryKey: 'irTemperature',
     primaryLabel: 'Ambient Temp',

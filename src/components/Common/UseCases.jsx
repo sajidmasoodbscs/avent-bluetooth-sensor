@@ -55,7 +55,7 @@ const SensorCard = ({ title, icon: Icon, iconBg, onClick }) => (
         </Box>
 
         <Box sx={{ flexGrow: 1, display: "flex", flexDirection: "column" }}>
-            <Typography variant="body2" sx={{ color: "#000", fontWeight: 500 }}>
+            <Typography variant="body2" sx={{ color: "#000", fontWeight: 500, lineHeight: 1.45, whiteSpace: "normal" }}>
                 {title}
             </Typography>
         </Box>
@@ -92,7 +92,7 @@ export default function UseCases() {
             <Grid container spacing={2} columns={12}>
                 <Grid item size={{ xs: 12, sm: 6, md: 4, lg: 4 }}>
                     <SensorCard
-                        title="Digital Temperature Use Case"
+                        title="Touchless Surface Temperature Measurement"
                         icon={ThermostatIcon}
                         iconBg="rgba(156, 39, 176, 0.1)"
                         onClick={() => handleRouteClick('Digital-Temperature-Use-Case')}
@@ -116,7 +116,7 @@ export default function UseCases() {
                 </Grid>
                 <Grid item size={{ xs: 12, sm: 6, md: 4, lg: 4 }}>
                     <SensorCard
-                        title="Pressure Sensor Use Case"
+                        title="Altitude / Depth Change Indicator (Altimeter)"
                         icon={TerrainIcon}
                         iconBg="rgba(0, 150, 136, 0.12)"
                         onClick={() => handleModalClick('pressure')}
@@ -124,7 +124,7 @@ export default function UseCases() {
                 </Grid>
                 <Grid item size={{ xs: 12, sm: 6, md: 4, lg: 4 }}>
                     <SensorCard
-                        title="Sound Mic Use Case"
+                        title="Sound-Triggered Control (Clap to Activate)"
                         icon={MicIcon}
                         iconBg="rgba(233, 30, 99, 0.12)"
                         onClick={() => handleModalClick('mic')}
@@ -140,7 +140,7 @@ export default function UseCases() {
                 </Grid>
                 <Grid item size={{ xs: 12, sm: 6, md: 4, lg: 4 }}>
                     <SensorCard
-                        title="Occupancy Alert"
+                        title="Intelligent Occupancy Detection for Energy Management Systems (HVAC, Lighting)"
                         icon={PersonIcon}
                         iconBg="rgba(76, 175, 80, 0.15)"
                         onClick={() => handleModalClick('occupancy')}
@@ -148,7 +148,7 @@ export default function UseCases() {
                 </Grid>
                 <Grid item size={{ xs: 12, sm: 6, md: 4, lg: 4 }}>
                     <SensorCard
-                        title="Tilt Alert"
+                        title="Real-Time Tilt & Stability Monitoring System"
                         icon={ScreenRotationIcon}
                         iconBg="rgba(63, 81, 181, 0.12)"
                         onClick={() => handleModalClick('tilt')}
@@ -156,7 +156,7 @@ export default function UseCases() {
                 </Grid>
                 <Grid item size={{ xs: 12, sm: 6, md: 4, lg: 4 }}>
                     <SensorCard
-                        title="Motion Alert"
+                        title="Smart Motion & Tamper Detection System"
                         icon={VibrationIcon}
                         iconBg="rgba(255, 87, 34, 0.12)"
                         onClick={() => handleModalClick('motion')}
@@ -164,7 +164,7 @@ export default function UseCases() {
                 </Grid>
                 <Grid item size={{ xs: 12, sm: 6, md: 4, lg: 4 }}>
                     <SensorCard
-                        title="Syringe Pressure Alert"
+                        title="Syringe and tube"
                         icon={MedicalServicesIcon}
                         iconBg="rgba(156, 39, 176, 0.12)"
                         onClick={() => handleModalClick('syringe')}

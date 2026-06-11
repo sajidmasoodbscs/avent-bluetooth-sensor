@@ -12,16 +12,32 @@ import {
   Typography,
 } from '@mui/material';
 import DescriptionIcon from '@mui/icons-material/Description';
+import PictureAsPdfIcon from '@mui/icons-material/PictureAsPdf';
 import sensorDatasheets from '../data/sensorDatasheets';
 
 const LOGO_COL_WIDTH = 180;
 const LOGO_CELL_HEIGHT = 72;
 
-function resolveLogoSrc(src) {
+function resolveAssetUrl(src) {
   if (!src) return null;
+  if (typeof src !== 'string') return src;
   if (src.startsWith('http') || src.startsWith('/static/') || src.startsWith('data:')) return src;
   return src.startsWith('/') ? src : `/${src}`;
 }
+
+function resolveLogoSrc(src) {
+  return resolveAssetUrl(src);
+}
+
+const linkSx = {
+  display: 'inline-flex',
+  alignItems: 'center',
+  gap: 0.5,
+  color: '#2e7d32',
+  fontWeight: 500,
+  textDecoration: 'none',
+  '&:hover': { textDecoration: 'underline' },
+};
 
 function LogoCell({ src, alt }) {
   const [failed, setFailed] = useState(false);
@@ -91,6 +107,7 @@ export default function DataSheetPage() {
               <TableCell sx={{ fontWeight: 700 }}>Model Number</TableCell>
               <TableCell sx={{ fontWeight: 700 }}>Sensor Type</TableCell>
               <TableCell sx={{ fontWeight: 700 }}>Datasheet / Product Page Link</TableCell>
+              <TableCell sx={{ fontWeight: 700 }}>Data Sheet PDF</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
@@ -122,19 +139,28 @@ export default function DataSheetPage() {
                     href={row.datasheetUrl}
                     target="_blank"
                     rel="noopener noreferrer"
-                    sx={{
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: 0.5,
-                      color: '#2e7d32',
-                      fontWeight: 500,
-                      textDecoration: 'none',
-                      '&:hover': { textDecoration: 'underline' },
-                    }}
+                    sx={linkSx}
                   >
                     <DescriptionIcon sx={{ fontSize: 18 }} />
                     Product Page
                   </Link>
+                </TableCell>
+                <TableCell>
+                  {row.datasheetPdf ? (
+                    <Link
+                      href={resolveAssetUrl(row.datasheetPdf)}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      sx={linkSx}
+                    >
+                      <PictureAsPdfIcon sx={{ fontSize: 18 }} />
+                      View Data Sheet
+                    </Link>
+                  ) : (
+                    <Typography variant="caption" sx={{ color: '#bbb' }}>
+                      —
+                    </Typography>
+                  )}
                 </TableCell>
               </TableRow>
             ))}

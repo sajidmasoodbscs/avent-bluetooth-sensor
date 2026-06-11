@@ -2,7 +2,16 @@
 import amphenolLogo from '../assets/sensors/Amphenol.png';
 import murataLogo from '../assets/sensors/Murata_Logo.png';
 import teconnectivityLogo from '../assets/sensors/te_logo.png';
+import tdklogo from '../assets/sensors/TDK_logo_vertical_blue.png';
 
+
+import htu31Pdf from '../assets/datasheets/HTU31.pdf';
+import ms5849Pdf from '../assets/datasheets/MS5849-02BA (20032999-50).pdf';
+import npa730bPdf from '../assets/datasheets/NPA-730B-005-D.pdf';
+import ztpd2210Pdf from '../assets/datasheets/ZTPD-2210.pdf';
+import sch16tPdf from '../assets/datasheets/SCH16T-K01-004.pdf';
+import mmict5838Pdf from '../assets/datasheets/MMICT5838-00-012.pdf';
+import irsD200Pdf from '../assets/datasheets/IRS-D200ST00R1.pdf';
 
 const sensorDatasheets = [
   {
@@ -12,6 +21,7 @@ const sensorDatasheets = [
     supplier: 'TE Connectivity',
     datasheetUrl: 'https://www.te.com/en/product-CAT-HSC0007.html',
     logo: teconnectivityLogo,
+    datasheetPdf: htu31Pdf,
   },
   {
     id: 'ms5849',
@@ -20,6 +30,7 @@ const sensorDatasheets = [
     supplier: 'TE Connectivity',
     datasheetUrl: 'https://www.te.com/en/product-20033838-50.html',
     logo: teconnectivityLogo,
+    datasheetPdf: ms5849Pdf,
   },
   {
     id: 'npa-730b',
@@ -28,6 +39,7 @@ const sensorDatasheets = [
     supplier: 'Amphenol',
     datasheetUrl: 'https://amphenol-sensors.com/hubfs/Documents/AAS-920-477J-NovaSensor-NPA-SurfaceMnt-013019-web.pdf',
     logo: amphenolLogo,
+    datasheetPdf: npa730bPdf,
   },
   {
     id: 'ztpd-2210',
@@ -36,6 +48,7 @@ const sensorDatasheets = [
     supplier: 'Amphenol',
     datasheetUrl: 'https://amphenol-sensors.com/hubfs/Specification%20sheet%20of%20ZTPD-2210(IRF042M00-00A0)%20(2).pdf',
     logo: amphenolLogo,
+    datasheetPdf: ztpd2210Pdf,
   },
   {
     id: 'sch16t',
@@ -44,14 +57,16 @@ const sensorDatasheets = [
     supplier: 'Murata',
     datasheetUrl: 'https://www.murata.com/en-us/products/sensor/gyro/overview/lineup/sch16t',
     logo: murataLogo,
+    datasheetPdf: sch16tPdf,
   },
   {
     id: 'mmict5838',
     modelNumber: 'MMICT5838-00-012',
     sensorType: 'Microphone',
     supplier: 'TDK InvenSense',
-    datasheetUrl: 'https://www.tdk.com/en/search?q=MMICT5838',
-    logo: null,
+    datasheetUrl: 'https://invensense.tdk.com/en-us/products/microphone/t5838',
+    logo: tdklogo,
+    datasheetPdf: mmict5838Pdf,
   },
   {
     id: 'irs-d200',
@@ -60,6 +75,7 @@ const sensorDatasheets = [
     supplier: 'Murata',
     datasheetUrl: 'https://www.murata.com/en-us/products/sensor/pir/overview/lineup/irs-d200',
     logo: murataLogo,
+    datasheetPdf: irsD200Pdf,
   },
 ];
 
