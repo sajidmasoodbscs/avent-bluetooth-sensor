@@ -107,7 +107,7 @@ export default function Sidebar({ drawerOpen, setDrawerOpen }) {
             <ListItemIcon>
               <MenuBookIcon sx={{ color: "#000" }} />
             </ListItemIcon>
-            <ListItemText primary="Sensor and Wireless Line Card Page" />
+            <ListItemText primary="Sensor and Wireless Line Card" />
           </ListItem>
 
           {/* <ListItem component="div" sx={{ cursor: "pointer", "&:hover": { backgroundColor: "rgba(0,0,0,0.04)" } }}>
