@@ -92,7 +92,7 @@ export function usePirStream(active = true) {
       cancelled = true;
       if (pollTimerRef.current) clearTimeout(pollTimerRef.current);
     };
-  }, [active, isRunning, isConnected, sendTextCommand, setLatestData]);
+  }, [active, isRunning, isConnected, sendTextCommand, setLatestData, threshold]);
 
   useEffect(() => {
     if (USE_DUMMY_PIR_DATA || !active) return;

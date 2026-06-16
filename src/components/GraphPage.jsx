@@ -88,7 +88,7 @@ const GraphPage = () => {
       interval = setInterval(updateData, 1000);
     }
     return () => clearInterval(interval);
-  }, [config.primaryKey, config.secondaryKey, isRunning]);
+  }, [config.primaryKey, config.secondaryKey, isRunning, sensorId]);
 
   return (
     <Box sx={{ maxWidth: '1400px', mx: 'auto', p: 1 }}>
