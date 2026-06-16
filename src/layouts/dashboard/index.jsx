@@ -4,11 +4,9 @@ import MenuAppBar from "../../components/HeaderBar";
 import Sidebar from "../../components/Sidebar";
 import { Outlet } from "react-router-dom";
 import ConnectModal from "../../components/Modal/ConnectModal";
-import { useBle } from "../../ble/BleContext";
 
 const DashboardLayout = () => {
   const [drawerOpen, setDrawerOpen] = useState(false);
-  const { setLatestData } = useBle();
 
   return (
     <Box sx={{ display: "flex" }}>
@@ -32,7 +30,7 @@ const DashboardLayout = () => {
       </Box>
 
       {/* Global Connection Modal */}
-      <ConnectModal onSensorData={setLatestData} />
+      <ConnectModal />
     </Box>
   );
 };

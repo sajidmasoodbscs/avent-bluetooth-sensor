@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useBle } from '../ble/BleContext';
 import { ImuTrajectoryStore } from '../utils/imuPhysics';
-import { GET_COMMANDS, parseTLV, TLV } from '../utils/bleProtocol';
+import { GET_COMMANDS, parseTLV, parseTLVDetailed, TLV } from '../utils/bleProtocol';
 
 /** Set to `true` only for offline UI demo without a device. */
 export const USE_DUMMY_BLE_DATA = false;
@@ -23,13 +23,32 @@ function getDummySampleAtCycle(i) {
 
 function parseImuTlv(dataView) {
   const items = parseTLV(dataView);
-  const tlv = { accel: [], gyro: [], pressure: null };
+  const tlv = { accel: [], gyro: [], pressure: null, altChangeCm: null };
   for (const { type, value } of items) {
     if (type === TLV.ACCEL) tlv.accel.push(value);
     else if (type === TLV.GYRO) tlv.gyro.push(value);
     else if (type === TLV.PRES) tlv.pressure = value;
+    else if (type === TLV.ALT_CHANGE) tlv.altChangeCm = value;
   }
   return tlv;
+}
+
+function logAltimeterPoll(dataView, altTlv, mode, cycle) {
+  const rawBytes = Array.from(
+    new Uint8Array(dataView.buffer, dataView.byteOffset, dataView.byteLength),
+  );
+  const detailed = parseTLVDetailed(dataView);
+  const tag0x0D = detailed.find((r) => r.type === TLV.ALT_CHANGE);
+
+  console.log('[Use case Altimeter] GET:ALT', {
+    mode,
+    cycle,
+    rawBytes,
+    tlvRecords: detailed,
+    received0x0D: Boolean(tag0x0D),
+    tag0x0D: tag0x0D ?? null,
+    parsedAltChangeCm: altTlv.altChangeCm,
+  });
 }
 
 /**
@@ -134,14 +153,37 @@ export function useImuStream(mode = 'full', active = true) {
               imuTlv.gyro[2],
               nowS,
             );
+            console.log('[Use case IMU] GET:IMU', {
+              mode,
+              cycle,
+              accel: imuTlv.accel,
+              gyro: imuTlv.gyro,
+            });
           }
         }
 
-        if (mode !== 'imu' && cycle % 5 === 0) {
+        if (mode === 'pressure') {
+          const altBuf = await sendTextCommand(GET_COMMANDS.ALT, 250);
+          const altTlv = parseImuTlv(altBuf);
+          logAltimeterPoll(altBuf, altTlv, mode, cycle);
+          if (altTlv.altChangeCm != null) {
+            const nowS = performance.now() / 1000;
+            storeRef.current.pushAltitudeChangeCm(altTlv.altChangeCm, nowS);
+            const latest = storeRef.current.snapshot();
+            console.log('[Use case Altimeter] sample', {
+              altChangeCm: altTlv.altChangeCm,
+              altUnit: latest.altUnit,
+              lastAlt: latest.alt.at(-1),
+              sampleCount: latest.alt.length,
+            });
+          }
+        } else if (mode !== 'imu' && cycle % 5 === 0) {
           const presBuf = await sendTextCommand(GET_COMMANDS.PRES, 15);
           const presTlv = parseImuTlv(presBuf);
-          if (presTlv.pressure != null) {
-            const nowS = performance.now() / 1000;
+          const nowS = performance.now() / 1000;
+          if (presTlv.altChangeCm != null) {
+            storeRef.current.pushAltitudeChangeCm(presTlv.altChangeCm, nowS);
+          } else if (presTlv.pressure != null) {
             storeRef.current.pushPressure(presTlv.pressure, nowS);
           }
         }

@@ -73,7 +73,7 @@ const sensorDatasheets = [
     modelNumber: 'IRS-D200ST00R1',
     sensorType: 'Passive Infrared Sensor',
     supplier: 'Murata',
-    datasheetUrl: 'https://www.murata.com/en-us/products/sensor/pir/overview/lineup/irs-d200',
+    datasheetUrl: 'https://www.murata.com/en-us/products/sensor/infrared/overview/lineup/irs',
     logo: murataLogo,
     datasheetPdf: irsD200Pdf,
   },

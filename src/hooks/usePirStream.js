@@ -77,6 +77,7 @@ export function usePirStream(active = true) {
         if (pir != null) {
           setPirValue(pir);
           setLatestData((prev) => ({ ...prev, pir }));
+          console.log('[Use case PIR] GET:PIR', { pir, detected: pir >= threshold });
         }
       } catch (e) {
         console.warn('[PIR] poll error', e);

@@ -1,6 +1,7 @@
 
 import React from "react";
 import { Box ,Typography} from "@mui/material";
+import avnetAbacusLogo from "../../assets/images/avnet_abacus.svg";
 
 const Hero = () => {
   return (
@@ -21,6 +22,19 @@ const Hero = () => {
           }}
         >
           <Box sx={{ position: "relative", zIndex: 1 }}>
+            <Box
+              component="img"
+              src={avnetAbacusLogo}
+              alt="Avnet Abacus"
+              sx={{
+                height: { xs: 32, sm: 40 },
+                width: "auto",
+                maxWidth: "100%",
+                objectFit: "contain",
+                mb: 2,
+                filter: "brightness(0) invert(1)",
+              }}
+            />
             <Typography variant="h3" sx={{ fontWeight: "medium", mb: 1,fontSize:'26px' }}>
               Welcome to Avnet Abacus Sensor Evaluation Board V1.0
             </Typography>

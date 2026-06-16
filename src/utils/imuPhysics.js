@@ -38,6 +38,7 @@ export class ImuTrajectoryStore {
     this.altTimeS = [];
     this.altitudeM = [];
     this.altBaseline = null;
+    this._altUnit = 'm_asl';
     this.posX = [];
     this.posY = [];
     this.posZ = [];
@@ -118,12 +119,23 @@ export class ImuTrajectoryStore {
   }
 
   pushPressure(pressureHpa, monotonicS) {
-    if (this._t0 == null) return;
+    if (this._t0 == null) this._t0 = monotonicS;
     const elapsed = monotonicS - this._t0;
     const alt = pressureToAltitudeM(pressureHpa);
     if (this.altBaseline == null) this.altBaseline = alt;
+    this._altUnit = 'm_asl';
     this.altTimeS.push(elapsed);
     this.altitudeM.push(alt);
+  }
+
+  /** Device TLV 0x0D — relative altitude change in cm (+ = up vs firmware baseline). */
+  pushAltitudeChangeCm(deltaCm, monotonicS) {
+    if (this._t0 == null) this._t0 = monotonicS;
+    const elapsed = monotonicS - this._t0;
+    if (this.altBaseline == null) this.altBaseline = 0;
+    this._altUnit = 'cm';
+    this.altTimeS.push(elapsed);
+    this.altitudeM.push(deltaCm);
   }
 
   reset() {
@@ -137,6 +149,7 @@ export class ImuTrajectoryStore {
     this.altTimeS = [];
     this.altitudeM = [];
     this.altBaseline = null;
+    this._altUnit = 'm_asl';
     this.posX = [];
     this.posY = [];
     this.posZ = [];
@@ -167,6 +180,7 @@ export class ImuTrajectoryStore {
       altT: [...this.altTimeS],
       alt: [...this.altitudeM],
       altBase: this.altBaseline,
+      altUnit: this._altUnit,
     };
   }
 

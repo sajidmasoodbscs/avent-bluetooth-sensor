@@ -28,6 +28,7 @@ function recordParsedData(parsedData, sensorKey) {
   if (parsedData.humidity != null) appendSensorPoint('humidity', parsedData.humidity);
   if (parsedData.irTemperature != null) appendSensorPoint('irTemperature', parsedData.irTemperature);
   if (parsedData.pressure != null) appendSensorPoint('pressure', parsedData.pressure);
+  if (parsedData.baroPressure != null) appendSensorPoint('baroPressure', parsedData.baroPressure);
   if (parsedData.pir != null) appendSensorPoint('pir', parsedData.pir);
   if (Array.isArray(parsedData.accel)) {
     parsedData.accel.forEach((v) => appendSensorPoint('imuAccel', v));

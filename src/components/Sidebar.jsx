@@ -50,11 +50,11 @@ export default function Sidebar({ drawerOpen, setDrawerOpen }) {
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
-          height: 64,
+          minHeight: 80,
           p: 2,
         }}
       >
-        <img src={logo} alt="Logo" style={{ maxWidth: "100%", maxHeight: "40px" }} />
+        <img src={logo} alt="Avnet Abacus" style={{ maxWidth: "100%", maxHeight: "56px" }} />
       </Box>
 
       <Box sx={{ overflow: "auto" }}>

@@ -20,6 +20,7 @@ export default function HomePage() {
           accel={latestData.accel}
           gyro={latestData.gyro}
           pressure={latestData.pressure}
+          baroPressure={latestData.baroPressure}
           pir={latestData.pir}
         />
       </Box>

@@ -176,11 +176,20 @@ export function useMicStream(active = true) {
     appendPcm(chunk);
     const elapsed = (performance.now() - startRef.current) / 1000;
     if (elapsed > 0) {
-      setStats({
+      const nextStats = {
         bytes: bytesRef.current,
         notifications: notifyRef.current,
         kbps: (bytesRef.current * 8) / elapsed / 1000,
-      });
+      };
+      setStats(nextStats);
+      if (notifyRef.current % 25 === 0) {
+        console.log('[Use case Mic] PCM notification', {
+          notifications: nextStats.notifications,
+          bytes: nextStats.bytes,
+          kbps: nextStats.kbps.toFixed(1),
+          capturing: isCapturingRef.current,
+        });
+      }
     }
   }, [appendPcm]);
 
@@ -217,6 +226,7 @@ export function useMicStream(active = true) {
           await writeCommand(new TextEncoder().encode(GET_COMMANDS.MIC));
         });
         setMicModeActive(true);
+        console.log('[Use case Mic] GET:MIC started', { charUuid: MIC_AUDIO_CHAR_UUID });
 
         const svc = service?.current;
         if (!svc || cancelled) return;

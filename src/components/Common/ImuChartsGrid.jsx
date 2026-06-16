@@ -151,13 +151,13 @@ export default function ImuChartsGrid({ snap, charts, animate = false }) {
         {show('alt') && (
           <Grid item size={{ xs: 12, md: charts.includes('traj') ? 6 : 12 }}>
             <DarkLineChartPanel
-              title="Barometric altitude (m ASL)"
-              yLabel="Altitude (m)"
+              title={d.altUnit === 'cm' ? 'Altitude change (cm vs baseline)' : 'Barometric altitude (m ASL)'}
+              yLabel={d.altUnit === 'cm' ? 'Δ altitude (cm)' : 'Altitude (m)'}
               data={altRows}
               referenceY={d.altBase}
               minSamples={1}
             >
-              <Line type="monotone" dataKey="alt" name="Altitude ASL" stroke={ALT_COL} dot={false} strokeWidth={1.8} isAnimationActive={animate} animationDuration={anim} />
+              <Line type="monotone" dataKey="alt" name={d.altUnit === 'cm' ? 'Δ altitude (cm)' : 'Altitude ASL'} stroke={ALT_COL} dot={false} strokeWidth={1.8} isAnimationActive={animate} animationDuration={anim} />
             </DarkLineChartPanel>
           </Grid>
         )}
@@ -194,9 +194,10 @@ export function buildImuStatusText(snap, useDummy, pollIntervalS) {
   let deltaStr = '';
   if (d.alt.length >= 1) {
     const last = d.alt[d.alt.length - 1];
-    altStr = `${last.toFixed(1)} m`;
+    const unit = d.altUnit === 'cm' ? 'cm' : 'm';
+    altStr = `${last.toFixed(1)} ${unit}`;
     if (d.altBase != null) {
-      deltaStr = `  Δ=${(last - d.altBase).toFixed(1)} m`;
+      deltaStr = `  Δ=${(last - d.altBase).toFixed(1)} ${unit}`;
     }
   }
   const px = d.px;
@@ -207,6 +208,9 @@ export function buildImuStatusText(snap, useDummy, pollIntervalS) {
     return `Demo live stream ~${(1000 / (pollIntervalS * 1000)).toFixed(0)} Hz (no BLE)  |  ${n >= 2
       ? `Samples: ${n}  |  A=(${d.ax[n - 1].toFixed(2)}, ${d.ay[n - 1].toFixed(2)}, ${d.az[n - 1].toFixed(2)}) m/s²  |  G=(${d.gx[n - 1].toFixed(2)}, ${d.gy[n - 1].toFixed(2)}, ${d.gz[n - 1].toFixed(2)}) °/s  |  Alt=${altStr}${deltaStr}  |  Pos=(${px[n - 1].toFixed(3)}, ${py[n - 1].toFixed(3)}, ${pz[n - 1].toFixed(3)}) m`
       : 'Building trace…'}`;
+  }
+  if (d.alt.length >= 1 && n < 2) {
+    return `Altitude samples: ${d.alt.length}  |  Alt=${altStr}${deltaStr}`;
   }
   return n < 2
     ? 'Waiting for BLE data…'

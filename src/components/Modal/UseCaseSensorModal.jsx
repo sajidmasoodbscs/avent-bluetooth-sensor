@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import {
   Box,
   Modal,
@@ -15,13 +15,20 @@ import { useImuStream } from '../../hooks/useImuStream';
 import { useMicStream } from '../../hooks/useMicStream';
 import { usePirStream } from '../../hooks/usePirStream';
 import { useAlertStream } from '../../hooks/useAlertStream';
+import { useBreathHumidityStream } from '../../hooks/useBreathHumidityStream';
 import ImuChartsGrid, { buildImuStatusText } from '../Common/ImuChartsGrid';
 import MicChartsGrid from '../Common/MicChartsGrid';
 import MicAudioControls from '../Common/MicAudioControls';
 import PirDetectionVisual from '../Common/PirDetectionVisual';
 import AlertVisual from '../Common/AlertVisual';
+import BreathHumidityVisual from '../Common/BreathHumidityVisual';
 
 const MODAL_CONFIG = {
+  breath: {
+    title: 'Temperature & Humidity — Breath Response Demo',
+    subtitle: 'Breathe onto sensor → GET:ALL TLV 0x01 (°C) & 0x02 (%RH) · ~5 Hz live graph',
+    kind: 'breath',
+  },
   gyro: {
     title: 'Gyroscope Positioning Use Case',
     subtitle: 'Acceleration, gyroscope, and integrated 3D trajectory',
@@ -31,7 +38,7 @@ const MODAL_CONFIG = {
   },
   pressure: {
     title: 'Altitude / Depth Change Indicator (Altimeter)',
-    subtitle: 'Barometric altitude from pressure (GET:PRES)',
+    subtitle: 'Altitude change from GET:ALT · TLV 0x0D (cm vs baseline)',
     kind: 'imu',
     imuMode: 'pressure',
     charts: ['alt'],
@@ -77,13 +84,26 @@ export default function UseCaseSensorModal({ open, useCaseKey, onClose }) {
   const { isConnected } = useBle();
 
   const imu = useImuStream(config?.imuMode ?? 'full', open && config?.kind === 'imu');
+  const breath = useBreathHumidityStream(open && config?.kind === 'breath');
   const mic = useMicStream(open && useCaseKey === 'mic');
   const pir = usePirStream(open && useCaseKey === 'pir');
   const alert = useAlertStream(config?.alertKey, open && config?.kind === 'alert');
 
+  useEffect(() => {
+    if (!open || !useCaseKey || !config) return;
+    console.log('[Use case] modal active', {
+      useCaseKey,
+      kind: config.kind,
+      imuMode: config.imuMode,
+      alertKey: config.alertKey,
+      isConnected,
+    });
+  }, [open, useCaseKey, config, isConnected]);
+
   if (!config) return null;
 
-  const stream = config.kind === 'mic' ? mic
+  const stream = config.kind === 'breath' ? breath
+    : config.kind === 'mic' ? mic
     : config.kind === 'pir' ? pir
       : config.kind === 'alert' ? alert
         : imu;
@@ -174,6 +194,14 @@ export default function UseCaseSensorModal({ open, useCaseKey, onClose }) {
                 ? `Demo · Signal ${pir.pirValue.toFixed(0)} · ${pir.detected ? 'Motion detected' : 'Idle'}`
                 : `Live BLE · Signal ${pir.pirValue.toFixed(0)} · Threshold ${pir.threshold}`}
             </Typography>
+          </>
+        ) : config.kind === 'breath' ? (
+          <>
+            <BreathHumidityVisual
+              snap={breath.snap}
+              pollHz={breath.pollHz}
+              isConnected={isConnected}
+            />
           </>
         ) : config.kind === 'mic' ? (
           <>

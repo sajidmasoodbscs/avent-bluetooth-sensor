@@ -58,6 +58,15 @@ const GraphPage = () => {
         setDisplayValue(current);
         setDisplaySecondaryValue(secondary);
 
+        console.log('[Use case Graph]', {
+          sensorId,
+          primaryKey: config.primaryKey,
+          primaryValue: current,
+          secondaryKey: config.secondaryKey,
+          secondaryValue: secondary,
+          historyPoints: hist1.length,
+        });
+
         if (config.secondaryKey) {
           const hist2 = readSensorHistory(config.secondaryKey, 50);
           combined = hist1.map((p, i) => ({

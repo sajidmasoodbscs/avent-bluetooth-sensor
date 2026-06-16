@@ -8,17 +8,20 @@ import {
   BLE_RX_UUID,
   BLE_ALERT_UUID,
   GET_COMMANDS,
+  TLV,
   parseTLV,
+  parseTLVDetailed,
   tlvItemsToSensorData,
   parseAlertNotification,
 } from '../../utils/bleProtocol';
 
-const ConnectModal = ({ onSensorData }) => {
+const ConnectModal = () => {
   const [open, setOpen] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
   const [isScanning, setIsScanning] = useState(false);
   const [reconnect, setReconnect] = useState(false);
   const pollingTimeoutRef = useRef(null);
+  const pollCycleRef = useRef(0);
   const alertHandlerRef = useRef(null);
   const ble = useBle();
 
@@ -34,9 +37,85 @@ const ConnectModal = ({ onSensorData }) => {
 
   const handleClose = () => setOpen(false);
 
-  const handlePollResponse = (dataView) => {
+  const handleGetPirResponse = (dataView) => {
+    const rawBytes = Array.from(
+      new Uint8Array(dataView.buffer, dataView.byteOffset, dataView.byteLength),
+    );
     const items = parseTLV(dataView);
     const parsedData = tlvItemsToSensorData(items);
+    const tlvRecords = parseTLVDetailed(dataView);
+    const tag0x07 = tlvRecords.find((r) => r.type === TLV.PIR);
+
+    console.log('[BLE device] GET:PIR', {
+      rawBytes,
+      byteLength: rawBytes.length,
+      tlvRecords,
+      received0x07: Boolean(tag0x07),
+      tag0x07: tag0x07 ?? null,
+      pir: parsedData.pir ?? null,
+    });
+
+    if (parsedData.pir != null) {
+      appendSensorPoint('pir', parsedData.pir);
+      ble.setLatestData((prev) => ({ ...prev, pir: parsedData.pir }));
+    }
+  };
+
+  const handleGetAltResponse = (dataView) => {
+    const rawBytes = Array.from(
+      new Uint8Array(dataView.buffer, dataView.byteOffset, dataView.byteLength),
+    );
+    const items = parseTLV(dataView);
+    const parsedData = tlvItemsToSensorData(items);
+    const tlvRecords = parseTLVDetailed(dataView);
+    const tag0x0C = tlvRecords.find((r) => r.type === TLV.BARO_PRESS);
+    const tag0x0D = tlvRecords.find((r) => r.type === TLV.ALT_CHANGE);
+
+    console.log('[BLE device] GET:ALT', {
+      rawBytes,
+      byteLength: rawBytes.length,
+      tlvRecords,
+      received0x0C: Boolean(tag0x0C),
+      tag0x0C: tag0x0C ?? null,
+      baroPressureHpa: parsedData.baroPressure ?? null,
+      received0x0D: Boolean(tag0x0D),
+      tag0x0D: tag0x0D ?? null,
+      altChangeCm: parsedData.altChangeCm ?? null,
+    });
+
+    if (parsedData.baroPressure != null) {
+      appendSensorPoint('baroPressure', parsedData.baroPressure);
+    }
+
+    if (parsedData.baroPressure != null || parsedData.altChangeCm != null) {
+      ble.setLatestData((prev) => ({ ...prev, ...parsedData }));
+    }
+  };
+
+  const handlePollResponse = (dataView, { source = 'GET:ALL' } = {}) => {
+    const items = parseTLV(dataView);
+    const parsedData = tlvItemsToSensorData(items);
+    const rawBytes = Array.from(
+      new Uint8Array(dataView.buffer, dataView.byteOffset, dataView.byteLength),
+    );
+    const tlvItems = items.map(({ type, value }) => ({
+      type: `0x${type.toString(16).padStart(2, '0')}`,
+      value,
+    }));
+
+    if (source === 'GET:ALL') {
+      console.log('[BLE device] GET:ALL', {
+        rawBytes,
+        tlvItems,
+        parsedData,
+      });
+    } else if (source === 'GET:PRES' || parsedData.pressure != null) {
+      console.log(`[BLE device] ${source}`, {
+        rawBytes,
+        pressure: parsedData.pressure ?? null,
+        tlvItems,
+      });
+    }
 
     if (parsedData.temperature != null) appendSensorPoint('temperature', parsedData.temperature);
     if (parsedData.humidity != null) appendSensorPoint('humidity', parsedData.humidity);
@@ -52,7 +131,6 @@ const ConnectModal = ({ onSensorData }) => {
     if (Object.keys(parsedData).length > 0) {
       ble.setLatestData((prev) => ({ ...prev, ...parsedData }));
     }
-    if (onSensorData) onSensorData(parsedData);
     setOpen(false);
   };
 
@@ -113,6 +191,8 @@ const ConnectModal = ({ onSensorData }) => {
       await subscribeAlerts(alertCharacteristic);
 
       const cmd = new TextEncoder().encode(GET_COMMANDS.ALL);
+      const altCmd = new TextEncoder().encode(GET_COMMANDS.ALT);
+      const pirCmd = new TextEncoder().encode(GET_COMMANDS.PIR);
       let consecutiveErrors = 0;
 
       const pollData = async () => {
@@ -124,12 +204,26 @@ const ConnectModal = ({ onSensorData }) => {
             return;
           }
 
+          const cycle = pollCycleRef.current;
+
           await ble.withGattLock(async () => {
             await txCharacteristic.writeValue(cmd);
             await new Promise((resolve) => setTimeout(resolve, 300));
             const value = await rxCharacteristic.readValue();
-            handlePollResponse(value);
+            handlePollResponse(value, { source: 'GET:ALL' });
+
+            await txCharacteristic.writeValue(altCmd);
+            await new Promise((resolve) => setTimeout(resolve, 250));
+            const altValue = await rxCharacteristic.readValue();
+            handleGetAltResponse(altValue);
+
+            await txCharacteristic.writeValue(pirCmd);
+            await new Promise((resolve) => setTimeout(resolve, 200));
+            const pirValue = await rxCharacteristic.readValue();
+            handleGetPirResponse(pirValue);
           });
+
+          pollCycleRef.current = cycle + 1;
           consecutiveErrors = 0;
           pollingTimeoutRef.current = setTimeout(pollData, 500);
         } catch (error) {
