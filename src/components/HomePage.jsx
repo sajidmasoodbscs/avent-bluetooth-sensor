@@ -21,6 +21,7 @@ export default function HomePage() {
           gyro={latestData.gyro}
           pressure={latestData.pressure}
           baroPressure={latestData.baroPressure}
+          baroTemperature={latestData.baroTemperature}
           pir={latestData.pir}
         />
       </Box>
