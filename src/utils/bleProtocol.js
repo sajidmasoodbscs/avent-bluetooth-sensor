@@ -20,10 +20,12 @@ export const TLV = {
   TILT: 0x09,
   MOTION: 0x0a,
   PRESSURE_ALERT: 0x0b,
-  /** Barometric pressure float32, hPa (from GET:ALT). */
+  /** Barometric pressure float32, mbar/hPa (from GET:ALT). */
   BARO_PRESS: 0x0c,
   /** Altitude change vs baseline, float32, centimeters (+ = up). */
   ALT_CHANGE: 0x0d,
+  /** MS5849 compensated temperature float32, °C (from GET:ALT / GET:ALL). */
+  BARO_TEMP: 0x0e,
 };
 
 export const GET_COMMANDS = {
@@ -49,6 +51,7 @@ export const SENSOR_GET_CMD = {
   imuGyro: GET_COMMANDS.IMU,
   pressure: GET_COMMANDS.PRES,
   baroPressure: GET_COMMANDS.ALT,
+  baroTemperature: GET_COMMANDS.ALT,
   pir: GET_COMMANDS.PIR,
   all: GET_COMMANDS.ALL,
 };
@@ -147,6 +150,9 @@ export function tlvItemsToSensorData(items) {
         break;
       case TLV.ALT_CHANGE:
         data.altChangeCm = value;
+        break;
+      case TLV.BARO_TEMP:
+        data.baroTemperature = value;
         break;
       case TLV.GYRO:
         data.gyro = [...(data.gyro || []), value];

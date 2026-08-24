@@ -189,7 +189,7 @@ const SensorModuleGroup = ({ logo, logoAlt, brandLabel, modelCode, children }) =
   </Paper>
 );
 
-export default function BreathMoistureLevel({ temperature, humidity, irTemperature, accel, gyro, pressure, baroPressure, pir, isUseCaseView }) {
+export default function BreathMoistureLevel({ temperature, humidity, irTemperature, accel, gyro, pressure, baroPressure, baroTemperature, pir, isUseCaseView }) {
   const [modalOpen, setModalOpen] = useState(false);
   const [modalConfig, setModalConfig] = useState({ companyName: 'Nordic Sensor', sensorName: '', sensorKey: 'all', extraValues: null });
   const navigate = useNavigate();
@@ -245,6 +245,15 @@ export default function BreathMoistureLevel({ temperature, humidity, irTemperatu
                   icon={AirIcon}
                   iconBg="rgba(3, 169, 244, 0.12)"
                   onClick={() => handleCardClick({ sensorName: 'Barometric Pressure', sensorKey: 'baroPressure' })}
+                />
+                <SensorCard
+                  nested
+                  title="Barometric Temperature"
+                  value={baroTemperature != null ? baroTemperature.toFixed(1) : '—'}
+                  unit="°C"
+                  icon={ThermostatIcon}
+                  iconBg="rgba(156, 39, 176, 0.1)"
+                  onClick={() => handleCardClick({ sensorName: 'Barometric Temperature', sensorKey: 'baroTemperature' })}
                 />
               </SensorModuleGroup>
             </Grid>

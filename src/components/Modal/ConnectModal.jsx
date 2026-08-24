@@ -70,6 +70,7 @@ const ConnectModal = () => {
     const tlvRecords = parseTLVDetailed(dataView);
     const tag0x0C = tlvRecords.find((r) => r.type === TLV.BARO_PRESS);
     const tag0x0D = tlvRecords.find((r) => r.type === TLV.ALT_CHANGE);
+    const tag0x0E = tlvRecords.find((r) => r.type === TLV.BARO_TEMP);
 
     console.log('[BLE device] GET:ALT', {
       rawBytes,
@@ -81,13 +82,23 @@ const ConnectModal = () => {
       received0x0D: Boolean(tag0x0D),
       tag0x0D: tag0x0D ?? null,
       altChangeCm: parsedData.altChangeCm ?? null,
+      received0x0E: Boolean(tag0x0E),
+      tag0x0E: tag0x0E ?? null,
+      baroTemperatureC: parsedData.baroTemperature ?? null,
     });
 
     if (parsedData.baroPressure != null) {
       appendSensorPoint('baroPressure', parsedData.baroPressure);
     }
+    if (parsedData.baroTemperature != null) {
+      appendSensorPoint('baroTemperature', parsedData.baroTemperature);
+    }
 
-    if (parsedData.baroPressure != null || parsedData.altChangeCm != null) {
+    if (
+      parsedData.baroPressure != null
+      || parsedData.altChangeCm != null
+      || parsedData.baroTemperature != null
+    ) {
       ble.setLatestData((prev) => ({ ...prev, ...parsedData }));
     }
   };
@@ -121,6 +132,8 @@ const ConnectModal = () => {
     if (parsedData.humidity != null) appendSensorPoint('humidity', parsedData.humidity);
     if (parsedData.irTemperature != null) appendSensorPoint('irTemperature', parsedData.irTemperature);
     if (parsedData.pressure != null) appendSensorPoint('pressure', parsedData.pressure);
+    if (parsedData.baroPressure != null) appendSensorPoint('baroPressure', parsedData.baroPressure);
+    if (parsedData.baroTemperature != null) appendSensorPoint('baroTemperature', parsedData.baroTemperature);
     if (Array.isArray(parsedData.accel)) {
       parsedData.accel.forEach((v) => appendSensorPoint('imuAccel', v));
     }
