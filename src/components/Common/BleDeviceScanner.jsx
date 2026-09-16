@@ -5,6 +5,7 @@ import {
   BLE_TX_UUID,
   BLE_RX_UUID,
   BLE_ALERT_UUID,
+  MIC_SERVICE_UUID,
   GET_COMMANDS,
   parseTLV,
   tlvItemsToSensorData,
@@ -22,7 +23,7 @@ const BleDeviceScanner = ({ onSensorData, onAlert }) => {
     try {
       const device = await navigator.bluetooth.requestDevice({
         filters: [{ services: [BLE_SERVICE_UUID] }],
-        optionalServices: [BLE_SERVICE_UUID],
+        optionalServices: [BLE_SERVICE_UUID, MIC_SERVICE_UUID],
       });
 
       const server = await device.gatt.connect();

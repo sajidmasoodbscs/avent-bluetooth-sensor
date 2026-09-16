@@ -1,4 +1,5 @@
 import React, { createContext, useCallback, useContext, useMemo, useRef, useState } from 'react';
+import { clearMicAiSessionChat } from '../utils/micChatStorage';
 
 const BleContext = createContext(null);
 
@@ -15,6 +16,7 @@ export function BleProvider({ children }) {
   const micModeActiveRef = useRef(false);
   const serverRef = useRef(null);
   const serviceRef = useRef(null);
+  const micServiceRef = useRef(null);
   const txRef = useRef(null);
   const rxRef = useRef(null);
   const alertRef = useRef(null);
@@ -34,9 +36,10 @@ export function BleProvider({ children }) {
     }
   }, []);
 
-  const setConnection = useCallback(({ server, service, tx, rx, alert }) => {
+  const setConnection = useCallback(({ server, service, micService, tx, rx, alert }) => {
     serverRef.current = server;
     serviceRef.current = service;
+    micServiceRef.current = micService ?? null;
     txRef.current = tx;
     rxRef.current = rx;
     alertRef.current = alert ?? null;
@@ -46,12 +49,14 @@ export function BleProvider({ children }) {
   const clearConnection = useCallback(() => {
     serverRef.current = null;
     serviceRef.current = null;
+    micServiceRef.current = null;
     txRef.current = null;
     rxRef.current = null;
     alertRef.current = null;
     setIsConnected(false);
     setMicModeActive(false);
     micModeActiveRef.current = false;
+    clearMicAiSessionChat();
   }, []);
 
   const setActiveSensorKeyTracked = useCallback((key) => {
@@ -106,6 +111,7 @@ export function BleProvider({ children }) {
     micModeActiveRef,
     server: serverRef,
     service: serviceRef,
+    micService: micServiceRef,
     tx: txRef,
     rx: rxRef,
     alert: alertRef,

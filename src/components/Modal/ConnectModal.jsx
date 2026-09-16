@@ -7,6 +7,7 @@ import {
   BLE_TX_UUID,
   BLE_RX_UUID,
   BLE_ALERT_UUID,
+  MIC_SERVICE_UUID,
   GET_COMMANDS,
   TLV,
   parseTLV,
@@ -14,6 +15,7 @@ import {
   tlvItemsToSensorData,
   parseAlertNotification,
 } from '../../utils/bleProtocol';
+import { clearMicAiSessionChat } from '../../utils/micChatStorage';
 
 const ConnectModal = () => {
   const [open, setOpen] = useState(false);
@@ -169,7 +171,7 @@ const ConnectModal = () => {
     try {
       const device = await navigator.bluetooth.requestDevice({
         filters: [{ services: [BLE_SERVICE_UUID] }],
-        optionalServices: [BLE_SERVICE_UUID],
+        optionalServices: [BLE_SERVICE_UUID, MIC_SERVICE_UUID],
       });
 
       const connectedServer = await device.gatt.connect();
@@ -193,13 +195,25 @@ const ConnectModal = () => {
       const rxCharacteristic = await service.getCharacteristic(BLE_RX_UUID);
       const alertCharacteristic = await service.getCharacteristic(BLE_ALERT_UUID);
 
+      let micService = null;
+      try {
+        micService = await connectedServer.getPrimaryService(MIC_SERVICE_UUID);
+        console.log('[BLE] Microphone service discovered', { uuid: MIC_SERVICE_UUID });
+      } catch (micErr) {
+        console.warn('[BLE] Microphone service not found — mic use case needs this GATT service', micErr);
+      }
+
       ble.setConnection({
         server: connectedServer,
         service,
+        micService,
         tx: txCharacteristic,
         rx: rxCharacteristic,
         alert: alertCharacteristic,
       });
+
+      // Mic AI chat is only for the current BLE connection
+      clearMicAiSessionChat();
 
       await subscribeAlerts(alertCharacteristic);
 

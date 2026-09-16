@@ -7,6 +7,10 @@ export const BLE_ALERT_UUID = '12345678-1234-1234-1234-123456789abf';
 
 /** Legacy mic PCM notifications (same service after GET:MIC). */
 export const MIC_AUDIO_CHAR_UUID = 'a1b2c3d4-0002-4000-8000-00805f9b34fb';
+/** Separate microphone GATT service (Word integration guide). */
+export const MIC_SERVICE_UUID = 'a1b2c3d4-0001-4000-8000-00805f9b34fb';
+/** Ideal PCM notification payload size from firmware (240 bytes). */
+export const MIC_EXPECTED_CHUNK_BYTES = 240;
 
 export const TLV = {
   TEMP: 0x01,

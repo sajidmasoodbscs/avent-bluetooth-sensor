@@ -19,6 +19,7 @@ import { useBreathHumidityStream } from '../../hooks/useBreathHumidityStream';
 import ImuChartsGrid, { buildImuStatusText } from '../Common/ImuChartsGrid';
 import MicChartsGrid from '../Common/MicChartsGrid';
 import MicAudioControls from '../Common/MicAudioControls';
+import MicAiPanel from '../Common/MicAiPanel';
 import PirDetectionVisual from '../Common/PirDetectionVisual';
 import AlertVisual from '../Common/AlertVisual';
 import BreathHumidityVisual from '../Common/BreathHumidityVisual';
@@ -45,7 +46,7 @@ const MODAL_CONFIG = {
   },
   mic: {
     title: 'Sound-Triggered Control (Clap to Activate)',
-    subtitle: 'GET:MIC → PCM notifications · STOP:MIC returns to sensors',
+    subtitle: 'BLE mic PCM → record → Gemini (AI Studio) transcribes & answers',
     kind: 'mic',
   },
   pir: {
@@ -217,6 +218,11 @@ export default function UseCaseSensorModal({ open, useCaseKey, onClose }) {
               onPlay={mic.playRecording}
               onStopPlay={mic.stopPlayback}
             />
+            <MicAiPanel
+              getWavBlob={mic.getWavBlob}
+              hasExportableAudio={mic.hasExportableAudio}
+              isCapturing={mic.isCapturing}
+            />
             <MicChartsGrid
               waveformRows={mic.waveformRows}
               envelopeRows={mic.envelopeRows}
@@ -226,7 +232,7 @@ export default function UseCaseSensorModal({ open, useCaseKey, onClose }) {
             />
             {!isConnected && (
               <Typography variant="caption" sx={{ color: '#888', display: 'block', mt: 1, textAlign: 'center' }}>
-                Connect device — mic mode sends GET:MIC and subscribes to PCM notifications.
+                Connect device — subscribe mic notifications, then GET:MIC (Word guide order).
               </Typography>
             )}
           </>

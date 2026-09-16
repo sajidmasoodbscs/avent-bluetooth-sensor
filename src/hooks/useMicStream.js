@@ -3,6 +3,7 @@ import { useBle } from '../ble/BleContext';
 import {
   GET_COMMANDS,
   MIC_AUDIO_CHAR_UUID,
+  MIC_EXPECTED_CHUNK_BYTES,
 } from '../utils/bleProtocol';
 import {
   MIC_SAMPLE_RATE,
@@ -28,6 +29,7 @@ export function useMicStream(active = true) {
     writeCommand,
     withGattLock,
     service,
+    micService,
     setMicModeActive,
   } = useBle();
 
@@ -46,7 +48,7 @@ export function useMicStream(active = true) {
   const [captureSampleCount, setCaptureSampleCount] = useState(0);
   const [waveformRows, setWaveformRows] = useState([]);
   const [envelopeRows, setEnvelopeRows] = useState([]);
-  const [stats, setStats] = useState({ kbps: 0, notifications: 0, bytes: 0 });
+  const [stats, setStats] = useState({ kbps: 0, notifications: 0, bytes: 0, lastChunkBytes: 0 });
 
   const bytesRef = useRef(0);
   const notifyRef = useRef(0);
@@ -96,7 +98,7 @@ export function useMicStream(active = true) {
     setIsCapturing(false);
     setWaveformRows([]);
     setEnvelopeRows([]);
-    setStats({ kbps: 0, notifications: 0, bytes: 0 });
+    setStats({ kbps: 0, notifications: 0, bytes: 0, lastChunkBytes: 0 });
   }, []);
 
   const startCapture = useCallback(() => {
@@ -168,10 +170,34 @@ export function useMicStream(active = true) {
     return buildWavBlob(samples);
   }, [getExportSamples]);
 
-  const handleNotification = useCallback((data) => {
-    const chunk = pcmBytesToInt16Array(data);
+  const handleNotification = useCallback((eventOrData) => {
+    // Copy bytes — DataView may be reused by the BLE stack (Word guide).
+    let bytes;
+    if (eventOrData?.target?.value) {
+      const v = eventOrData.target.value;
+      bytes = new Uint8Array(v.buffer, v.byteOffset, v.byteLength).slice();
+    } else if (eventOrData instanceof DataView) {
+      bytes = new Uint8Array(eventOrData.buffer, eventOrData.byteOffset, eventOrData.byteLength).slice();
+    } else {
+      bytes = eventOrData instanceof Uint8Array
+        ? eventOrData.slice()
+        : new Uint8Array(eventOrData);
+    }
+
+    const chunkLen = bytes.byteLength;
+    if (chunkLen !== MIC_EXPECTED_CHUNK_BYTES && notifyRef.current < 5) {
+      console.warn('[Use case Mic] PCM chunk size', {
+        bytes: chunkLen,
+        expected: MIC_EXPECTED_CHUNK_BYTES,
+        note: chunkLen < MIC_EXPECTED_CHUNK_BYTES
+          ? 'Likely MTU truncation — firmware sends at most ATT_MTU-3'
+          : 'Unexpected size',
+      });
+    }
+
+    const chunk = pcmBytesToInt16Array(bytes);
     if (startRef.current == null) startRef.current = performance.now();
-    bytesRef.current += data.byteLength ?? data.length ?? 0;
+    bytesRef.current += chunkLen;
     notifyRef.current += 1;
     appendPcm(chunk);
     const elapsed = (performance.now() - startRef.current) / 1000;
@@ -180,12 +206,15 @@ export function useMicStream(active = true) {
         bytes: bytesRef.current,
         notifications: notifyRef.current,
         kbps: (bytesRef.current * 8) / elapsed / 1000,
+        lastChunkBytes: chunkLen,
       };
       setStats(nextStats);
       if (notifyRef.current % 25 === 0) {
         console.log('[Use case Mic] PCM notification', {
           notifications: nextStats.notifications,
           bytes: nextStats.bytes,
+          lastChunkBytes: chunkLen,
+          expectedChunkBytes: MIC_EXPECTED_CHUNK_BYTES,
           kbps: nextStats.kbps.toFixed(1),
           capturing: isCapturingRef.current,
         });
@@ -222,24 +251,38 @@ export function useMicStream(active = true) {
 
     const startMicBle = async () => {
       try {
-        await withGattLock(async () => {
-          await writeCommand(new TextEncoder().encode(GET_COMMANDS.MIC));
-        });
-        setMicModeActive(true);
-        console.log('[Use case Mic] GET:MIC started', { charUuid: MIC_AUDIO_CHAR_UUID });
+        // Word guide order: subscribe notifications FIRST, then GET:MIC.
+        const micSvc = micService?.current;
+        const mainSvc = service?.current;
+        const ownerSvc = micSvc || mainSvc;
+        if (!ownerSvc) {
+          console.warn('[Mic] No GATT service available for audio characteristic');
+          return;
+        }
 
-        const svc = service?.current;
-        if (!svc || cancelled) return;
+        const micChar = await ownerSvc.getCharacteristic(MIC_AUDIO_CHAR_UUID);
+        if (cancelled) return;
 
-        const micChar = await svc.getCharacteristic(MIC_AUDIO_CHAR_UUID);
-        const handler = (event) => handleNotification(event.target.value);
+        const handler = (event) => handleNotification(event);
         notifyHandlerRef.current = handler;
         micCharRef.current = micChar;
 
         await micChar.startNotifications();
         micChar.addEventListener('characteristicvaluechanged', handler);
+        console.log('[Use case Mic] notifications enabled', {
+          charUuid: MIC_AUDIO_CHAR_UUID,
+          viaMicService: Boolean(micSvc),
+        });
+
+        if (cancelled) return;
+
+        await withGattLock(async () => {
+          await writeCommand(new TextEncoder().encode(GET_COMMANDS.MIC));
+        });
+        setMicModeActive(true);
+        console.log('[Use case Mic] GET:MIC sent (after subscribe)');
       } catch (e) {
-        console.warn('[Mic] BLE subscribe failed', e);
+        console.warn('[Mic] BLE subscribe / GET:MIC failed', e);
         setMicModeActive(false);
       }
     };
@@ -248,16 +291,32 @@ export function useMicStream(active = true) {
 
     return () => {
       cancelled = true;
-      const micChar = micCharRef.current;
-      if (micChar && notifyHandlerRef.current) {
-        micChar.removeEventListener('characteristicvaluechanged', notifyHandlerRef.current);
-        micChar.stopNotifications().catch(() => {});
-      }
-      micCharRef.current = null;
-      notifyHandlerRef.current = null;
-      withGattLock(async () => {
-        await writeCommand(new TextEncoder().encode(GET_COMMANDS.STOP_MIC));
-      }).catch(() => {}).finally(() => setMicModeActive(false));
+      const stop = async () => {
+        // Word guide: STOP:MIC first, then stop notifications.
+        try {
+          await withGattLock(async () => {
+            await writeCommand(new TextEncoder().encode(GET_COMMANDS.STOP_MIC));
+          });
+        } catch (_) {
+          /* ignore */
+        } finally {
+          setMicModeActive(false);
+        }
+
+        const micChar = micCharRef.current;
+        if (micChar && notifyHandlerRef.current) {
+          micChar.removeEventListener('characteristicvaluechanged', notifyHandlerRef.current);
+          try {
+            await micChar.stopNotifications();
+          } catch (_) {
+            /* ignore */
+          }
+        }
+        micCharRef.current = null;
+        notifyHandlerRef.current = null;
+        console.log('[Use case Mic] STOP:MIC + notifications stopped');
+      };
+      stop();
     };
   }, [
     active,
@@ -267,6 +326,7 @@ export function useMicStream(active = true) {
     writeCommand,
     withGattLock,
     service,
+    micService,
     setMicModeActive,
   ]);
 

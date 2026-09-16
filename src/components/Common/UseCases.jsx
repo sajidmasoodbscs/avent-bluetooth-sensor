@@ -17,8 +17,9 @@ import UseCaseSensorModal from "../Modal/UseCaseSensorModal";
 import teLogo from '../../assets/sensors/te_logo.png';
 import amphenolLogo from '../../assets/sensors/Amphenol.png';
 import murataLogo from '../../assets/sensors/Murata_Logo.png';
+import tdkLogo from '../../assets/sensors/TDK_logo_vertical_blue.png';
 
-/** Legacy use case cards — kept in code, hidden from the grid */
+/** Legacy cards kept in code but hidden (Digital Pressure, PIR) */
 const SHOW_LEGACY_USE_CASES = false;
 
 const ModelCodeBadge = ({ modelCode }) => (
@@ -296,20 +297,24 @@ export default function UseCases() {
                         />
                     </UseCaseModuleGroup>
                 </Grid>
+                <Grid item size={{ xs: 12 }}>
+                    <UseCaseModuleGroup logo={tdkLogo} logoAlt="TDK InvenSense">
+                        <SensorCard
+                            nested
+                            title="Sound-Triggered Control (Clap to Activate)"
+                            modelCode="MMICT5838-00-012"
+                            icon={MicIcon}
+                            iconBg="rgba(233, 30, 99, 0.12)"
+                            onClick={() => handleModalClick('mic')}
+                        />
+                    </UseCaseModuleGroup>
+                </Grid>
                 <Grid item size={{ xs: 12, sm: 6, md: 4, lg: 4 }} sx={{ display: SHOW_LEGACY_USE_CASES ? undefined : 'none' }}>
                     <SensorCard
                         title="Digital Presssure Use Case"
                         icon={OpacityIcon}
                         iconBg="rgba(33, 150, 243, 0.1)"
                         onClick={() => handleRouteClick('Digital-Presssure-Use-Case')}
-                    />
-                </Grid>
-                <Grid item size={{ xs: 12, sm: 6, md: 4, lg: 4 }} sx={{ display: SHOW_LEGACY_USE_CASES ? undefined : 'none' }}>
-                    <SensorCard
-                        title="Sound-Triggered Control (Clap to Activate)"
-                        icon={MicIcon}
-                        iconBg="rgba(233, 30, 99, 0.12)"
-                        onClick={() => handleModalClick('mic')}
                     />
                 </Grid>
                 <Grid item size={{ xs: 12, sm: 6, md: 4, lg: 4 }} sx={{ display: SHOW_LEGACY_USE_CASES ? undefined : 'none' }}>
