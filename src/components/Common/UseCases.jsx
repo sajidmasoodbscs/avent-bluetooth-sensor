@@ -301,7 +301,7 @@ export default function UseCases() {
                     <UseCaseModuleGroup logo={tdkLogo} logoAlt="TDK InvenSense">
                         <SensorCard
                             nested
-                            title="Sound-Triggered Control (Clap to Activate)"
+                            title="AI Sound"
                             modelCode="MMICT5838-00-012"
                             icon={MicIcon}
                             iconBg="rgba(233, 30, 99, 0.12)"
