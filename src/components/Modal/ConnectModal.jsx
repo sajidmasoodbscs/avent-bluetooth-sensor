@@ -169,20 +169,39 @@ const ConnectModal = () => {
     setIsScanning(true);
 
     try {
-      const device = await navigator.bluetooth.requestDevice({
-        filters: [{ services: [BLE_SERVICE_UUID] }],
-        optionalServices: [BLE_SERVICE_UUID, MIC_SERVICE_UUID],
-      });
+      // Prefer mic optional service for later audio; fall back if browser/firmware rejects it.
+      let device;
+      try {
+        device = await navigator.bluetooth.requestDevice({
+          filters: [{ services: [BLE_SERVICE_UUID] }],
+          optionalServices: [BLE_SERVICE_UUID, MIC_SERVICE_UUID],
+        });
+      } catch (pickerErr) {
+        const msg = pickerErr?.message || '';
+        const cancelled = pickerErr?.name === 'NotFoundError'
+          || /cancel/i.test(msg);
+        if (cancelled) throw pickerErr;
+
+        console.warn('[BLE] requestDevice with mic service failed — retrying sensors only', pickerErr);
+        device = await navigator.bluetooth.requestDevice({
+          filters: [{ services: [BLE_SERVICE_UUID] }],
+          optionalServices: [BLE_SERVICE_UUID],
+        });
+      }
 
       const connectedServer = await device.gatt.connect();
-      localStorage.setItem('bleConnected', 'true');
-
       await startDataStream(connectedServer);
+      localStorage.setItem('bleConnected', 'true');
+      clearMicAiSessionChat();
     } catch (error) {
       console.error('BLE Error:', error);
       localStorage.removeItem('bleConnected');
       ble.clearConnection();
-      setErrorMessage(error.message || 'Bluetooth connection failed');
+      if (error?.name === 'NotFoundError') {
+        setErrorMessage('No device selected. Please try again and choose your sensor.');
+      } else {
+        setErrorMessage(error.message || 'Bluetooth connection failed');
+      }
     } finally {
       setIsScanning(false);
     }
@@ -190,30 +209,20 @@ const ConnectModal = () => {
 
   const startDataStream = async (connectedServer) => {
     try {
+      // Keep connect path sensor-only — do not resolve mic GATT here (avoids connection failures).
       const service = await connectedServer.getPrimaryService(BLE_SERVICE_UUID);
       const txCharacteristic = await service.getCharacteristic(BLE_TX_UUID);
       const rxCharacteristic = await service.getCharacteristic(BLE_RX_UUID);
       const alertCharacteristic = await service.getCharacteristic(BLE_ALERT_UUID);
 
-      let micService = null;
-      try {
-        micService = await connectedServer.getPrimaryService(MIC_SERVICE_UUID);
-        console.log('[BLE] Microphone service discovered', { uuid: MIC_SERVICE_UUID });
-      } catch (micErr) {
-        console.warn('[BLE] Microphone service not found — mic use case needs this GATT service', micErr);
-      }
-
       ble.setConnection({
         server: connectedServer,
         service,
-        micService,
+        micService: null,
         tx: txCharacteristic,
         rx: rxCharacteristic,
         alert: alertCharacteristic,
       });
-
-      // Mic AI chat is only for the current BLE connection
-      clearMicAiSessionChat();
 
       await subscribeAlerts(alertCharacteristic);
 
@@ -288,7 +297,9 @@ const ConnectModal = () => {
       pollData();
     } catch (err) {
       console.error('startDataStream error:', err);
-      setErrorMessage('Failed to start data stream. Please try again.');
+      localStorage.removeItem('bleConnected');
+      ble.clearConnection();
+      throw err;
     }
   };
 

@@ -29,7 +29,7 @@ export function useMicStream(active = true) {
     writeCommand,
     withGattLock,
     service,
-    micService,
+    ensureMicService,
     setMicModeActive,
   } = useBle();
 
@@ -252,7 +252,8 @@ export function useMicStream(active = true) {
     const startMicBle = async () => {
       try {
         // Word guide order: subscribe notifications FIRST, then GET:MIC.
-        const micSvc = micService?.current;
+        // Resolve mic service lazily (not during device connect).
+        const micSvc = await ensureMicService?.();
         const mainSvc = service?.current;
         const ownerSvc = micSvc || mainSvc;
         if (!ownerSvc) {
@@ -260,7 +261,17 @@ export function useMicStream(active = true) {
           return;
         }
 
-        const micChar = await ownerSvc.getCharacteristic(MIC_AUDIO_CHAR_UUID);
+        let micChar;
+        try {
+          micChar = await ownerSvc.getCharacteristic(MIC_AUDIO_CHAR_UUID);
+        } catch (charErr) {
+          // Fallback: try main sensor service if mic service char missing
+          if (micSvc && mainSvc && ownerSvc !== mainSvc) {
+            micChar = await mainSvc.getCharacteristic(MIC_AUDIO_CHAR_UUID);
+          } else {
+            throw charErr;
+          }
+        }
         if (cancelled) return;
 
         const handler = (event) => handleNotification(event);
@@ -326,7 +337,7 @@ export function useMicStream(active = true) {
     writeCommand,
     withGattLock,
     service,
-    micService,
+    ensureMicService,
     setMicModeActive,
   ]);
 

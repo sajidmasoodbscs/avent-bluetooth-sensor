@@ -1,5 +1,6 @@
 import React, { createContext, useCallback, useContext, useMemo, useRef, useState } from 'react';
 import { clearMicAiSessionChat } from '../utils/micChatStorage';
+import { MIC_SERVICE_UUID } from '../utils/bleProtocol';
 
 const BleContext = createContext(null);
 
@@ -43,7 +44,25 @@ export function BleProvider({ children }) {
     txRef.current = tx;
     rxRef.current = rx;
     alertRef.current = alert ?? null;
+    // Always leave mic mode when (re)connecting sensors
+    setMicModeActive(false);
+    micModeActiveRef.current = false;
     setIsConnected(Boolean(server));
+  }, []);
+
+  /** Lazy-resolve mic GATT service (do not call during initial sensor connect). */
+  const ensureMicService = useCallback(async () => {
+    if (micServiceRef.current) return micServiceRef.current;
+    if (!serverRef.current) return null;
+    try {
+      const svc = await serverRef.current.getPrimaryService(MIC_SERVICE_UUID);
+      micServiceRef.current = svc;
+      console.log('[BLE] Microphone service resolved', { uuid: MIC_SERVICE_UUID });
+      return svc;
+    } catch (err) {
+      console.warn('[BLE] Microphone service unavailable', err);
+      return null;
+    }
   }, []);
 
   const clearConnection = useCallback(() => {
@@ -109,6 +128,7 @@ export function BleProvider({ children }) {
     micModeActive,
     setMicModeActive: setMicModeActiveTracked,
     micModeActiveRef,
+    ensureMicService,
     server: serverRef,
     service: serviceRef,
     micService: micServiceRef,
@@ -130,6 +150,7 @@ export function BleProvider({ children }) {
     withGattLock,
     setActiveSensorKeyTracked,
     setMicModeActiveTracked,
+    ensureMicService,
   ]);
 
   return (
