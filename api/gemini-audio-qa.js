@@ -3,7 +3,7 @@
  * Env: GEMINI_API_KEY  (Google AI Studio: https://aistudio.google.com/apikey)
  */
 
-const GEMINI_MODEL = 'gemini-2.0-flash';
+const GEMINI_MODEL = 'gemini-3.6-flash';
 
 function extractJsonObject(text) {
   if (!text) return null;

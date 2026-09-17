@@ -17,6 +17,7 @@ import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome';
 import HistoryIcon from '@mui/icons-material/History';
 import PlayArrowIcon from '@mui/icons-material/PlayArrow';
 import CloseIcon from '@mui/icons-material/Close';
+import UploadFileIcon from '@mui/icons-material/UploadFile';
 import { askGeminiWithAudio, hasLocalGeminiFallbackKey } from '../../utils/geminiAudioQa';
 import { useBle } from '../../ble/BleContext';
 import {
@@ -27,29 +28,50 @@ import {
   readMicAiSessionChat,
 } from '../../utils/micChatStorage';
 
+const ACCEPT_AUDIO = 'audio/*,.wav,.mp3,.m4a,.ogg,.webm,.aac,.flac';
+
+function guessMimeType(file) {
+  if (file?.type) return file.type;
+  const name = (file?.name || '').toLowerCase();
+  if (name.endsWith('.wav')) return 'audio/wav';
+  if (name.endsWith('.mp3')) return 'audio/mpeg';
+  if (name.endsWith('.m4a')) return 'audio/mp4';
+  if (name.endsWith('.ogg')) return 'audio/ogg';
+  if (name.endsWith('.webm')) return 'audio/webm';
+  if (name.endsWith('.aac')) return 'audio/aac';
+  if (name.endsWith('.flac')) return 'audio/flac';
+  return 'audio/wav';
+}
+
 /**
- * Modal shows current audio Q&A only.
- * Session history (all turns + audio) in localStorage while BLE connected;
- * cleared on BLE connect / disconnect.
+ * Current Q&A + optional file upload (no BLE required for upload test).
+ * Session history in localStorage; cleared on BLE connect / disconnect.
  */
 export default function MicAiPanel({ getWavBlob, hasExportableAudio, isCapturing }) {
   const { isConnected } = useBle();
   const prevConnectedRef = useRef(isConnected);
+  const fileInputRef = useRef(null);
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [current, setCurrent] = useState(null);
   const [historyOpen, setHistoryOpen] = useState(false);
   const [history, setHistory] = useState(() => readMicAiSessionChat());
+  const [uploadedFile, setUploadedFile] = useState(null);
   const localFallback = hasLocalGeminiFallbackKey();
+
+  const canAskFromDevice = Boolean(hasExportableAudio && !isCapturing && isConnected);
+  const canAskFromUpload = Boolean(uploadedFile);
+  const canAsk = canAskFromDevice || canAskFromUpload;
 
   useEffect(() => {
     const wasConnected = prevConnectedRef.current;
     if (isConnected && !wasConnected) {
-      // Fresh BLE connect — cache already cleared in ConnectModal; reset UI
       setCurrent(null);
       setHistory([]);
       setError('');
+      setUploadedFile(null);
+      if (fileInputRef.current) fileInputRef.current.value = '';
     }
     if (!isConnected && wasConnected) {
       clearMicAiSessionChat();
@@ -60,34 +82,68 @@ export default function MicAiPanel({ getWavBlob, hasExportableAudio, isCapturing
     prevConnectedRef.current = isConnected;
   }, [isConnected]);
 
-  const handleAsk = async () => {
+  const runAsk = async (blob, mimeType, source) => {
     setError('');
     setLoading(true);
     try {
-      const blob = getWavBlob?.();
-      if (!blob) throw new Error('No audio recorded');
+      if (!blob) throw new Error('No audio available');
 
       const audioBase64 = await blobToBase64(blob);
-      const result = await askGeminiWithAudio(blob);
+      const result = await askGeminiWithAudio(blob, { mimeType });
       const turn = {
         id: String(Date.now()),
         t: Date.now(),
         transcript: result.transcript || '(no speech detected)',
         answer: result.answer || '(no answer)',
         audioBase64,
-        mimeType: 'audio/wav',
+        mimeType,
+        source,
       };
 
       setCurrent(turn);
       const next = appendMicAiSessionTurn(turn);
       setHistory(next);
-      console.log('[Mic AI] session turn saved', { id: turn.id, historyCount: next.length });
+      console.log('[Mic AI] session turn saved', {
+        id: turn.id,
+        source,
+        historyCount: next.length,
+      });
     } catch (e) {
       console.warn('[Mic AI] failed', e);
       setError(e?.message || 'Gemini request failed');
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleAsk = async () => {
+    // Prefer uploaded file when present (manual test path).
+    if (uploadedFile) {
+      await runAsk(uploadedFile, guessMimeType(uploadedFile), 'upload');
+      return;
+    }
+    const blob = getWavBlob?.();
+    await runAsk(blob, 'audio/wav', 'ble');
+  };
+
+  const handleFileChange = (event) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    if (file.size < 100) {
+      setError('Audio file is too small.');
+      return;
+    }
+    if (file.size > 20 * 1024 * 1024) {
+      setError('Audio file is too large (max 20 MB).');
+      return;
+    }
+    setError('');
+    setUploadedFile(file);
+  };
+
+  const clearUpload = () => {
+    setUploadedFile(null);
+    if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
   const openHistory = () => {
@@ -110,15 +166,44 @@ export default function MicAiPanel({ getWavBlob, hasExportableAudio, isCapturing
         Ask Google AI (Gemini)
       </Typography>
       <Typography variant="body2" sx={{ color: '#666', mb: 1.5 }}>
-        Record → Stop → Ask. This panel shows the <strong>current</strong> question and answer.
-        Use Session history for the full chat (audio + answers) while BLE stays connected.
+        Use board mic (Record → Stop → Ask), or <strong>upload an audio file</strong> to test
+        the AI flow without the Bluetooth device.
       </Typography>
 
       <Alert severity="info" sx={{ mb: 1.5 }}>
-        On Vercel set private env <code>GEMINI_API_KEY</code>. History is stored in localStorage
-        only for this BLE connection and is cleared when you connect again.
+        On Vercel set private env <code>GEMINI_API_KEY</code>. File upload does not need BLE.
+        Device history is cleared when you reconnect.
         {localFallback ? ' Local public fallback key is also present.' : null}
       </Alert>
+
+      <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 1.5 }} flexWrap="wrap" useFlexGap>
+        <Button
+          variant="outlined"
+          size="small"
+          component="label"
+          startIcon={<UploadFileIcon />}
+          disabled={loading}
+        >
+          Upload audio
+          <input
+            ref={fileInputRef}
+            hidden
+            type="file"
+            accept={ACCEPT_AUDIO}
+            onChange={handleFileChange}
+          />
+        </Button>
+        {uploadedFile && (
+          <>
+            <Typography variant="caption" sx={{ color: '#555', maxWidth: 220 }} noWrap title={uploadedFile.name}>
+              {uploadedFile.name}
+            </Typography>
+            <Button size="small" color="inherit" onClick={clearUpload} disabled={loading}>
+              Clear file
+            </Button>
+          </>
+        )}
+      </Stack>
 
       <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 1.5 }} flexWrap="wrap" useFlexGap>
         <Button
@@ -127,9 +212,9 @@ export default function MicAiPanel({ getWavBlob, hasExportableAudio, isCapturing
           size="small"
           startIcon={loading ? <CircularProgress size={16} color="inherit" /> : <AutoAwesomeIcon />}
           onClick={handleAsk}
-          disabled={loading || isCapturing || !hasExportableAudio || !isConnected}
+          disabled={loading || !canAsk}
         >
-          {loading ? 'Asking…' : 'Ask Google AI'}
+          {loading ? 'Asking…' : uploadedFile ? 'Ask from uploaded file' : 'Ask Google AI'}
         </Button>
         <Button
           variant="outlined"
@@ -142,7 +227,7 @@ export default function MicAiPanel({ getWavBlob, hasExportableAudio, isCapturing
         </Button>
         {isCapturing && (
           <Typography variant="caption" sx={{ color: '#888' }}>
-            Stop recording before asking
+            Stop recording before asking from device
           </Typography>
         )}
       </Stack>
@@ -153,7 +238,6 @@ export default function MicAiPanel({ getWavBlob, hasExportableAudio, isCapturing
         </Alert>
       )}
 
-      {/* Current turn only */}
       <Box
         sx={{
           p: 1.5,
@@ -165,12 +249,12 @@ export default function MicAiPanel({ getWavBlob, hasExportableAudio, isCapturing
       >
         {!current && !loading && (
           <Typography variant="body2" sx={{ color: '#999', textAlign: 'center', py: 2 }}>
-            No current answer yet. Record, stop, then Ask Google AI.
+            No current answer yet. Record from device, or upload an audio file, then Ask.
           </Typography>
         )}
 
         {loading && (
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, color: '#888', py: 2, justifyContent: 'center' }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, color: '#888', py: 2 }}>
             <CircularProgress size={16} />
             <Typography variant="caption">Gemini is answering…</Typography>
           </Box>
@@ -182,6 +266,7 @@ export default function MicAiPanel({ getWavBlob, hasExportableAudio, isCapturing
               <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 0.5 }}>
                 <Typography variant="caption" sx={{ color: '#888', fontWeight: 600 }}>
                   Your question (transcript)
+                  {current.source === 'upload' ? ' · uploaded file' : ' · device mic'}
                 </Typography>
                 {current.audioBase64 && (
                   <Button
@@ -218,7 +303,7 @@ export default function MicAiPanel({ getWavBlob, hasExportableAudio, isCapturing
         <DialogTitle sx={{ pr: 6 }}>
           Session history
           <Typography variant="body2" sx={{ color: '#888', fontWeight: 400, mt: 0.5 }}>
-            Chat for this BLE connection only · cleared on reconnect
+            Chat for this session · cleared on BLE reconnect
           </Typography>
           <IconButton
             onClick={() => setHistoryOpen(false)}
@@ -231,7 +316,7 @@ export default function MicAiPanel({ getWavBlob, hasExportableAudio, isCapturing
         <DialogContent dividers>
           {history.length === 0 ? (
             <Typography variant="body2" sx={{ color: '#999', textAlign: 'center', py: 4 }}>
-              No history yet for this connection.
+              No history yet.
             </Typography>
           ) : (
             <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
@@ -240,6 +325,7 @@ export default function MicAiPanel({ getWavBlob, hasExportableAudio, isCapturing
                   <Box sx={{ alignSelf: 'flex-end', maxWidth: '90%' }}>
                     <Typography variant="caption" sx={{ color: '#888', fontWeight: 600, display: 'block', textAlign: 'right', mb: 0.35 }}>
                       You · {new Date(turn.t).toLocaleTimeString()}
+                      {turn.source === 'upload' ? ' · upload' : ''}
                     </Typography>
                     <Box
                       sx={{

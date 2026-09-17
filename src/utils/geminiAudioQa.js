@@ -5,7 +5,7 @@
  * Optional local fallback: REACT_APP_GEMINI_API_KEY (only if /api is unavailable).
  */
 
-const GEMINI_MODEL = 'gemini-2.0-flash';
+const GEMINI_MODEL = 'gemini-3.6-flash';
 
 function blobToBase64(blob) {
   return new Promise((resolve, reject) => {
@@ -40,14 +40,14 @@ function extractJsonObject(text) {
   }
 }
 
-async function askGeminiDirect(base64, apiKey) {
+async function askGeminiDirect(base64, apiKey, mimeType = 'audio/wav') {
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${encodeURIComponent(apiKey)}`;
   const body = {
     contents: [
       {
         role: 'user',
         parts: [
-          { inlineData: { mimeType: 'audio/wav', data: base64 } },
+          { inlineData: { mimeType, data: base64 } },
           {
             text: [
               'You are a helpful assistant for the Avnet Abacus Sensor Evaluation Board demo.',
@@ -95,21 +95,24 @@ async function askGeminiDirect(base64, apiKey) {
 }
 
 /**
- * @returns {{ transcript: string, answer: string }}
+ * @param {Blob} audioBlob
+ * @param {{ mimeType?: string }} [options]
+ * @returns {Promise<{ transcript: string, answer: string }>}
  */
-export async function askGeminiWithAudio(wavBlob) {
-  if (!wavBlob || wavBlob.size < 100) {
-    throw new Error('No audio recorded. Start recording, speak your question, then Stop.');
+export async function askGeminiWithAudio(audioBlob, options = {}) {
+  const mimeType = options.mimeType || audioBlob?.type || 'audio/wav';
+  if (!audioBlob || audioBlob.size < 100) {
+    throw new Error('No audio. Record from the device, or upload an audio file.');
   }
 
-  const audioBase64 = await blobToBase64(wavBlob);
+  const audioBase64 = await blobToBase64(audioBlob);
 
   // Preferred: private server key on Vercel / vercel dev
   try {
     const res = await fetch('/api/gemini-audio-qa', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ audioBase64, mimeType: 'audio/wav' }),
+      body: JSON.stringify({ audioBase64, mimeType }),
     });
 
     if (res.ok) {
@@ -131,7 +134,7 @@ export async function askGeminiWithAudio(wavBlob) {
   const localKey = (process.env.REACT_APP_GEMINI_API_KEY || '').trim();
   if (localKey) {
     console.warn('[Mic AI] Using REACT_APP_GEMINI_API_KEY local fallback (key is public in the browser)');
-    return askGeminiDirect(audioBase64, localKey);
+    return askGeminiDirect(audioBase64, localKey, mimeType);
   }
 
   throw new Error(
