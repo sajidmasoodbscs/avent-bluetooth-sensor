@@ -22,7 +22,11 @@ const BleDeviceScanner = ({ onSensorData, onAlert }) => {
 
     try {
       const device = await navigator.bluetooth.requestDevice({
-        filters: [{ services: [BLE_SERVICE_UUID] }],
+        filters: [
+          { services: [BLE_SERVICE_UUID] },
+          { name: 'nRF54L_Mic' },
+          { namePrefix: 'nRF54L' },
+        ],
         optionalServices: [BLE_SERVICE_UUID, MIC_SERVICE_UUID],
       });
 

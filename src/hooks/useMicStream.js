@@ -19,6 +19,11 @@ import {
 
 export const USE_DUMMY_MIC_DATA = false;
 
+/** Match test_ble_mic.py: wait after start_notify before GET:MIC */
+const MIC_NOTIFY_SETTLE_MS = 500;
+/** Match test_ble_mic.py: short pause after STOP:MIC before stop_notify */
+const MIC_STOP_SETTLE_MS = 200;
+
 const MAX_DISPLAY_SAMPLES = MIC_SAMPLE_RATE * 3;
 const DUMMY_CHUNK_SAMPLES = 320;
 const DUMMY_CHUNK_MS = (DUMMY_CHUNK_SAMPLES / MIC_SAMPLE_RATE) * 1000;
@@ -26,10 +31,10 @@ const DUMMY_CHUNK_MS = (DUMMY_CHUNK_SAMPLES / MIC_SAMPLE_RATE) * 1000;
 export function useMicStream(active = true) {
   const {
     isConnected,
-    writeCommand,
+    writeCommandWithResponse,
     withGattLock,
-    service,
-    ensureMicService,
+    waitForGattIdle,
+    findMicAudioCharacteristic,
     setMicModeActive,
   } = useBle();
 
@@ -251,26 +256,15 @@ export function useMicStream(active = true) {
 
     const startMicBle = async () => {
       try {
-        // Word guide order: subscribe notifications FIRST, then GET:MIC.
-        // Resolve mic service lazily (not during device connect).
-        const micSvc = await ensureMicService?.();
-        const mainSvc = service?.current;
-        const ownerSvc = micSvc || mainSvc;
-        if (!ownerSvc) {
-          console.warn('[Mic] No GATT service available for audio characteristic');
-          return;
-        }
+        // Match test_ble_mic.py exclusive session: pause sensor polling first.
+        setMicModeActive(true);
+        await waitForGattIdle?.(2500);
+        if (cancelled) return;
 
-        let micChar;
-        try {
-          micChar = await ownerSvc.getCharacteristic(MIC_AUDIO_CHAR_UUID);
-        } catch (charErr) {
-          // Fallback: try main sensor service if mic service char missing
-          if (micSvc && mainSvc && ownerSvc !== mainSvc) {
-            micChar = await mainSvc.getCharacteristic(MIC_AUDIO_CHAR_UUID);
-          } else {
-            throw charErr;
-          }
+        // Bleak finds AUDIO_CHAR by UUID across services.
+        const micChar = await findMicAudioCharacteristic?.();
+        if (!micChar) {
+          throw new Error('Microphone audio characteristic not found (check optionalServices / MIC service)');
         }
         if (cancelled) return;
 
@@ -278,20 +272,20 @@ export function useMicStream(active = true) {
         notifyHandlerRef.current = handler;
         micCharRef.current = micChar;
 
+        console.log('[Use case Mic] Starting notification...');
         await micChar.startNotifications();
         micChar.addEventListener('characteristicvaluechanged', handler);
-        console.log('[Use case Mic] notifications enabled', {
-          charUuid: MIC_AUDIO_CHAR_UUID,
-          viaMicService: Boolean(micSvc),
-        });
+        console.log('[Use case Mic] Notifications started');
 
+        // test_ble_mic.py: await asyncio.sleep(0.5) before GET:MIC
+        await new Promise((r) => setTimeout(r, MIC_NOTIFY_SETTLE_MS));
         if (cancelled) return;
 
+        console.log('[Use case Mic] Sending GET:MIC (write with response)');
         await withGattLock(async () => {
-          await writeCommand(new TextEncoder().encode(GET_COMMANDS.MIC));
+          await writeCommandWithResponse(new TextEncoder().encode(GET_COMMANDS.MIC));
         });
-        setMicModeActive(true);
-        console.log('[Use case Mic] GET:MIC sent (after subscribe)');
+        console.log('[Use case Mic] GET:MIC accepted');
       } catch (e) {
         console.warn('[Mic] BLE subscribe / GET:MIC failed', e);
         setMicModeActive(false);
@@ -303,11 +297,13 @@ export function useMicStream(active = true) {
     return () => {
       cancelled = true;
       const stop = async () => {
-        // Word guide: STOP:MIC first, then stop notifications.
+        // test_ble_mic.py: STOP:MIC (response=True) → sleep 0.2 → stop_notify
         try {
           await withGattLock(async () => {
-            await writeCommand(new TextEncoder().encode(GET_COMMANDS.STOP_MIC));
+            await writeCommandWithResponse(new TextEncoder().encode(GET_COMMANDS.STOP_MIC));
           });
+          console.log('[Use case Mic] STOP:MIC sent');
+          await new Promise((r) => setTimeout(r, MIC_STOP_SETTLE_MS));
         } catch (_) {
           /* ignore */
         } finally {
@@ -325,7 +321,7 @@ export function useMicStream(active = true) {
         }
         micCharRef.current = null;
         notifyHandlerRef.current = null;
-        console.log('[Use case Mic] STOP:MIC + notifications stopped');
+        console.log('[Use case Mic] notifications stopped');
       };
       stop();
     };
@@ -334,10 +330,10 @@ export function useMicStream(active = true) {
     isRunning,
     isConnected,
     handleNotification,
-    writeCommand,
+    writeCommandWithResponse,
     withGattLock,
-    service,
-    ensureMicService,
+    waitForGattIdle,
+    findMicAudioCharacteristic,
     setMicModeActive,
   ]);
 

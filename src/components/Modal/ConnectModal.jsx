@@ -169,25 +169,16 @@ const ConnectModal = () => {
     setIsScanning(true);
 
     try {
-      // Prefer mic optional service for later audio; fall back if browser/firmware rejects it.
-      let device;
-      try {
-        device = await navigator.bluetooth.requestDevice({
-          filters: [{ services: [BLE_SERVICE_UUID] }],
-          optionalServices: [BLE_SERVICE_UUID, MIC_SERVICE_UUID],
-        });
-      } catch (pickerErr) {
-        const msg = pickerErr?.message || '';
-        const cancelled = pickerErr?.name === 'NotFoundError'
-          || /cancel/i.test(msg);
-        if (cancelled) throw pickerErr;
-
-        console.warn('[BLE] requestDevice with mic service failed — retrying sensors only', pickerErr);
-        device = await navigator.bluetooth.requestDevice({
-          filters: [{ services: [BLE_SERVICE_UUID] }],
-          optionalServices: [BLE_SERVICE_UUID],
-        });
-      }
+      // Match test_ble_mic.py access: sensor service + mic service must be allowed.
+      // Filters are OR — device may advertise as nRF54L_Mic (Python) or sensor UUID.
+      const device = await navigator.bluetooth.requestDevice({
+        filters: [
+          { services: [BLE_SERVICE_UUID] },
+          { name: 'nRF54L_Mic' },
+          { namePrefix: 'nRF54L' },
+        ],
+        optionalServices: [BLE_SERVICE_UUID, MIC_SERVICE_UUID],
+      });
 
       const connectedServer = await device.gatt.connect();
       await startDataStream(connectedServer);

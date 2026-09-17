@@ -1,6 +1,6 @@
 import React, { createContext, useCallback, useContext, useMemo, useRef, useState } from 'react';
 import { clearMicAiSessionChat } from '../utils/micChatStorage';
-import { MIC_SERVICE_UUID } from '../utils/bleProtocol';
+import { MIC_SERVICE_UUID, MIC_AUDIO_CHAR_UUID } from '../utils/bleProtocol';
 
 const BleContext = createContext(null);
 
@@ -94,6 +94,62 @@ export function BleProvider({ children }) {
     await txRef.current.writeValue(value);
   }, []);
 
+  /** Matches Bleak write_gatt_char(..., response=True) used by test_ble_mic.py */
+  const writeCommandWithResponse = useCallback(async (bytes) => {
+    if (!txRef.current) throw new Error('TX characteristic not ready');
+    const value = bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes);
+    if (typeof txRef.current.writeValueWithResponse === 'function') {
+      await txRef.current.writeValueWithResponse(value);
+    } else {
+      await txRef.current.writeValue(value);
+    }
+  }, []);
+
+  const waitForGattIdle = useCallback(async (timeoutMs = 2500) => {
+    const start = Date.now();
+    while (gattBusyRef.current && Date.now() - start < timeoutMs) {
+      // eslint-disable-next-line no-await-in-loop
+      await new Promise((r) => setTimeout(r, 25));
+    }
+  }, []);
+
+  /** Find AUDIO_CHAR across GATT services (same as Bleak UUID lookup). */
+  const findMicAudioCharacteristic = useCallback(async () => {
+    if (!serverRef.current) return null;
+
+    const tryService = async (svc) => {
+      if (!svc) return null;
+      try {
+        return await svc.getCharacteristic(MIC_AUDIO_CHAR_UUID);
+      } catch (_) {
+        return null;
+      }
+    };
+
+    let char = await tryService(micServiceRef.current);
+    if (char) return char;
+
+    const micSvc = await ensureMicService();
+    char = await tryService(micSvc);
+    if (char) return char;
+
+    char = await tryService(serviceRef.current);
+    if (char) return char;
+
+    try {
+      const services = await serverRef.current.getPrimaryServices();
+      console.log('[BLE] GATT services', services.map((s) => s.uuid));
+      for (const svc of services) {
+        // eslint-disable-next-line no-await-in-loop
+        char = await tryService(svc);
+        if (char) return char;
+      }
+    } catch (err) {
+      console.warn('[BLE] getPrimaryServices failed', err);
+    }
+    return null;
+  }, [ensureMicService]);
+
   const sendTextCommand = useCallback(async (command, readDelayMs = 250) => {
     if (!txRef.current || !rxRef.current) throw new Error('TX/RX characteristics not ready');
     const encoder = new TextEncoder();
@@ -118,6 +174,9 @@ export function BleProvider({ children }) {
     setConnection,
     clearConnection,
     writeCommand,
+    writeCommandWithResponse,
+    waitForGattIdle,
+    findMicAudioCharacteristic,
     sendTextCommand,
     withGattLock,
     isSensorRunning: (key) => Boolean(runningBySensor[key]),
@@ -146,6 +205,9 @@ export function BleProvider({ children }) {
     setConnection,
     clearConnection,
     writeCommand,
+    writeCommandWithResponse,
+    waitForGattIdle,
+    findMicAudioCharacteristic,
     sendTextCommand,
     withGattLock,
     setActiveSensorKeyTracked,
