@@ -7,6 +7,7 @@ import {
   BLE_TX_UUID,
   BLE_RX_UUID,
   BLE_ALERT_UUID,
+  MIC_SERVICE_UUID,
   GET_COMMANDS,
   TLV,
   parseTLV,
@@ -168,10 +169,15 @@ const ConnectModal = () => {
     setIsScanning(true);
 
     try {
-      // Sensor-only connect (mic optionalServices / name filters removed for stable pairing)
+      // Match test_ble_mic.py access: sensor service + mic service must be allowed.
+      // Filters are OR — device may advertise as nRF54L_Mic (Python) or sensor UUID.
       const device = await navigator.bluetooth.requestDevice({
-        filters: [{ services: [BLE_SERVICE_UUID] }],
-        optionalServices: [BLE_SERVICE_UUID],
+        filters: [
+          { services: [BLE_SERVICE_UUID] },
+          { name: 'nRF54L_Mic' },
+          { namePrefix: 'nRF54L' },
+        ],
+        optionalServices: [BLE_SERVICE_UUID, MIC_SERVICE_UUID],
       });
 
       const connectedServer = await device.gatt.connect();
